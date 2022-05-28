@@ -1,0 +1,11 @@
+#!/bin/bash
+
+declare -A projects
+projects=(
+    ["project-name"]="project/path"
+)
+
+declare -A project_names
+project_names=(
+    ["project-shorthand"]="project-name"
+)

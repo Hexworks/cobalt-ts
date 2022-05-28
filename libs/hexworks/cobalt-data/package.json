@@ -1,0 +1,30 @@
+{
+    "name": "@hexworks/cobalt-data",
+    "version": "2022.1.0-PREVIEW",
+    "description": "Useful data types for Cobalt.",
+    "homepage": "https://github.com/Hexworks/cobalt-ts",
+    "keywords": [
+        "hexworks",
+        "typescript",
+        "node",
+        "fp"
+    ],
+    "repository": {
+        "type": "git",
+        "url": "git@github.com:Hexworks/cobalt-ts.git"
+    },
+    "author": {
+        "name": "Hexworks"
+    },
+    "contributors": [
+        {
+            "name": "addamsson"
+        }
+    ],
+    "license": "Apache-2.0",
+    "peerDependencies": {
+        "fp-ts": "^2.11.4",
+        "tslog": "^3.2.2",
+        "io-ts": "^2.2.16"
+    }
+}
