@@ -19,10 +19,10 @@ backend, frontend and mobile apps.
 
 This is a list of published packages that you can add to your project. Follow the links if you'd like to learn more about how they work.
 
--   [Authorization](libs/hexworks/cobalt-data/README.md): Authorization utilities for Cobalt.
+-   [Authorization](libs/hexworks/cobalt-authorization/README.md): Authorization utilities for Cobalt.
 -   [Core](libs/hexworks/cobalt-core/README.md): Core utilities shared by all packages
 -   [Data](libs/hexworks/cobalt-data/README.md): Useful data types
--   [HTTP](libs/hexworks/cobalt-data/README.md): HTTP Utilities for Cobalt
+-   [HTTP](libs/hexworks/cobalt-http/README.md): HTTP Utilities for Cobalt
 
 ## Learning
 
