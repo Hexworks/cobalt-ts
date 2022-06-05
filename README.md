@@ -11,9 +11,9 @@ backend, frontend and mobile apps.
 
 **Note that** this project uses functional programming constructs so it is advised to read up on the relevant projects if you're not familiar with them.
 
--   [fp-ts]()
--   [io-ts]()
--   [newtypes-ts]()
+-   [fp-ts](https://github.com/gcanti/fp-ts)
+-   [io-ts](https://github.com/gcanti/io-ts)
+-   [newtype-ts](https://github.com/gcanti/newtype-ts)
 
 ## Packages
 
