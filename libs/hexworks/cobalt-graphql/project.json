@@ -1,0 +1,33 @@
+{
+    "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+    "sourceRoot": "libs/hexworks/cobalt-graphql/src",
+    "projectType": "library",
+    "targets": {
+        "build": {
+            "executor": "@nrwl/js:tsc",
+            "outputs": ["{options.outputPath}"],
+            "options": {
+                "outputPath": "dist/libs/hexworks/cobalt-graphql",
+                "main": "libs/hexworks/cobalt-graphql/src/index.ts",
+                "tsConfig": "libs/hexworks/cobalt-graphql/tsconfig.lib.json",
+                "assets": ["libs/hexworks/cobalt-graphql/*.md"]
+            }
+        },
+        "lint": {
+            "executor": "@nrwl/linter:eslint",
+            "outputs": ["{options.outputFile}"],
+            "options": {
+                "lintFilePatterns": ["libs/hexworks/cobalt-graphql/**/*.ts"]
+            }
+        },
+        "test": {
+            "executor": "@nrwl/jest:jest",
+            "outputs": ["coverage/libs/hexworks/cobalt-graphql"],
+            "options": {
+                "jestConfig": "libs/hexworks/cobalt-graphql/jest.config.ts",
+                "passWithNoTests": true
+            }
+        }
+    },
+    "tags": []
+}

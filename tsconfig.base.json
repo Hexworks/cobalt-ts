@@ -1,39 +1,30 @@
 {
-  "compileOnSave": false,
-  "compilerOptions": {
-    "rootDir": ".",
-    "sourceMap": true,
-    "declaration": false,
-    "moduleResolution": "node",
-    "emitDecoratorMetadata": true,
-    "experimentalDecorators": true,
-    "importHelpers": true,
-    "target": "es2015",
-    "module": "esnext",
-    "lib": [
-      "es2017",
-      "dom"
-    ],
-    "skipLibCheck": true,
-    "skipDefaultLibCheck": true,
-    "baseUrl": ".",
-    "paths": {
-      "@hexworks/cobalt-authorization": [
-        "libs/hexworks/cobalt-authorization/src/index.ts"
-      ],
-      "@hexworks/cobalt-core": [
-        "libs/hexworks/cobalt-core/src/index.ts"
-      ],
-      "@hexworks/cobalt-data": [
-        "libs/hexworks/cobalt-data/src/index.ts"
-      ],
-      "@hexworks/cobalt-http": [
-        "libs/hexworks/cobalt-http/src/index.ts"
-      ]
-    }
-  },
-  "exclude": [
-    "node_modules",
-    "tmp"
-  ]
+    "compileOnSave": false,
+    "compilerOptions": {
+        "rootDir": ".",
+        "sourceMap": true,
+        "declaration": false,
+        "moduleResolution": "node",
+        "emitDecoratorMetadata": true,
+        "experimentalDecorators": true,
+        "importHelpers": true,
+        "target": "es2015",
+        "module": "esnext",
+        "lib": ["es2017", "dom"],
+        "skipLibCheck": true,
+        "skipDefaultLibCheck": true,
+        "baseUrl": ".",
+        "paths": {
+            "@hexworks/cobalt-authorization": [
+                "libs/hexworks/cobalt-authorization/src/index.ts"
+            ],
+            "@hexworks/cobalt-core": ["libs/hexworks/cobalt-core/src/index.ts"],
+            "@hexworks/cobalt-data": ["libs/hexworks/cobalt-data/src/index.ts"],
+            "@hexworks/cobalt-graphql": [
+                "libs/hexworks/cobalt-graphql/src/index.ts"
+            ],
+            "@hexworks/cobalt-http": ["libs/hexworks/cobalt-http/src/index.ts"]
+        }
+    },
+    "exclude": ["node_modules", "tmp"]
 }

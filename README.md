@@ -22,6 +22,7 @@ This is a list of published packages that you can add to your project. Follow th
 -   [Authorization](libs/hexworks/cobalt-authorization/README.md): Authorization utilities for Cobalt.
 -   [Core](libs/hexworks/cobalt-core/README.md): Core utilities shared by all packages
 -   [Data](libs/hexworks/cobalt-data/README.md): Useful data types
+-   [GraphQL](libs/hexworks/cobalt-graphql/README.md): GraphQL Client for Cobalt
 -   [HTTP](libs/hexworks/cobalt-http/README.md): HTTP Utilities for Cobalt
 
 ## Learning
@@ -37,4 +38,3 @@ In case you are not familiar with functional programming and you'd like to learn
 -   [fp-ts cheatsheet](https://github.com/inato/fp-ts-cheatsheet)
 -   [fp-ts overview: Error handling, the functional way](https://troikatech.com/blog/2020/09/24/fp-ts-error-handling-the-functional-way/)
 -   [fp-ts and Beautiful API Calls](https://dev.to/gnomff_65/fp-ts-and-beautiful-api-calls-1f55)
-
