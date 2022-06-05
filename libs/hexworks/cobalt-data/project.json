@@ -1,33 +1,43 @@
 {
-    "$schema": "../../../node_modules/nx/schemas/project-schema.json",
-    "sourceRoot": "libs/hexworks/cobalt-data/src",
-    "projectType": "library",
-    "targets": {
-        "build": {
-            "executor": "@nrwl/js:tsc",
-            "outputs": ["{options.outputPath}"],
-            "options": {
-                "outputPath": "dist/libs/hexworks/cobalt-data",
-                "main": "libs/hexworks/cobalt-data/src/index.ts",
-                "tsConfig": "libs/hexworks/cobalt-data/tsconfig.lib.json",
-                "assets": ["libs/hexworks/cobalt-data/*.md"]
-            }
-        },
-        "lint": {
-            "executor": "@nrwl/linter:eslint",
-            "outputs": ["{options.outputFile}"],
-            "options": {
-                "lintFilePatterns": ["libs/hexworks/cobalt-data/**/*.ts"]
-            }
-        },
-        "test": {
-            "executor": "@nrwl/jest:jest",
-            "outputs": ["coverage/libs/hexworks/cobalt-data"],
-            "options": {
-                "jestConfig": "libs/hexworks/cobalt-data/jest.config.ts",
-                "passWithNoTests": true
-            }
-        }
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/hexworks/cobalt-data/src",
+  "projectType": "library",
+  "targets": {
+    "build": {
+      "executor": "@nrwl/js:tsc",
+      "outputs": [
+        "{options.outputPath}"
+      ],
+      "options": {
+        "outputPath": "dist/libs/hexworks/cobalt-data",
+        "main": "libs/hexworks/cobalt-data/src/index.ts",
+        "tsConfig": "libs/hexworks/cobalt-data/tsconfig.lib.json",
+        "assets": [
+          "libs/hexworks/cobalt-data/*.md"
+        ]
+      }
     },
-    "tags": []
+    "lint": {
+      "executor": "@nrwl/linter:eslint",
+      "outputs": [
+        "{options.outputFile}"
+      ],
+      "options": {
+        "lintFilePatterns": [
+          "libs/hexworks/cobalt-data/**/*.ts"
+        ]
+      }
+    },
+    "test": {
+      "executor": "@nrwl/jest:jest",
+      "outputs": [
+        "coverage/libs/hexworks/cobalt-data"
+      ],
+      "options": {
+        "jestConfig": "libs/hexworks/cobalt-data/jest.config.ts",
+        "passWithNoTests": true
+      }
+    }
+  },
+  "tags": []
 }

@@ -1,4 +1,5 @@
 import { coercePrimitive } from ".";
+
 describe("utils", () => {
     describe("coercePrimitive", () => {
         it("When 'a' is passed it returns 'a'", () => {

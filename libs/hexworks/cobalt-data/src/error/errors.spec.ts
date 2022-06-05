@@ -1,5 +1,5 @@
 import * as E from "fp-ts/Either";
-import { programErrorCodec } from "../codecs";
+import { programErrorCodec } from "..";
 
 describe("Given an error object", () => {
     describe("without cause", () => {

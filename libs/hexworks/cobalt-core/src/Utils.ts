@@ -1,4 +1,4 @@
-import * as t from "io-ts";
+import { ProgramErrorBase } from "@hexworks/cobalt-data";
 
 /**
  * Type guard for a value `T` that will only allow non-empty (non-null and non-undefined) values.
@@ -8,10 +8,10 @@ export function notEmpty<T>(value: T | null | undefined): value is T {
 }
 
 /**
- * Creates a new `Error` with the given `msg`.
+ * Throws a new `Error` with the given `msg`.
  */
-export const programError = (msg: string): never => {
-    throw new Error(msg);
+export const throwError = (msg: string): never => {
+    throw new GenericProgramError(msg);
 };
 
 /**
@@ -40,8 +40,11 @@ export const coercePrimitive = (value: string): string | number | boolean => {
     return value;
 };
 
-/**
- * Transforms the given `type` to an optional one.
- */
-export const optional = <T extends t.Mixed>(type: T) =>
-    t.union([type, t.undefined]);
+class GenericProgramError extends ProgramErrorBase<"GenericProgramError"> {
+    constructor(message: string) {
+        super({
+            __tag: "GenericProgramError",
+            message: message,
+        });
+    }
+}

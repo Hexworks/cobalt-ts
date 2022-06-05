@@ -30,7 +30,7 @@ export class CodecValidationError extends ProgramErrorBase<"CodecValidationError
  *
  * Use this in a `pipe`.
  */
-export const mapToError: <T>(
+export const toCodecValidationError: <T>(
     message: string
 ) => (fa: E.Either<t.Errors, T>) => E.Either<CodecValidationError, T> = (
     message

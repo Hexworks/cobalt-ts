@@ -2,6 +2,7 @@ import { ProgramError } from "./ProgramError";
 
 /**
  * Base class for all Error types. Use `__tag` for tagged unions.
+ *
  * Example implementation:
  * ```ts
  * class MyError extends ProgramErrorBase<"MyError"> {

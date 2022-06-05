@@ -52,13 +52,9 @@ describe("Given a http", () => {
         it("When it is valid Then it should return a value", async () => {
             const mock = new MockAdapter(axios);
 
-            mock.onPost(EVENTS_URL, {}).reply(200, events);
+            mock.onPost(EVENTS_URL).reply(200, events);
 
-            const result = await post({
-                url: "/events",
-                input: {},
-                codec: Events,
-            })();
+            const result = await post("/events", Events)();
 
             expect(result).toEqual(E.right(events));
         });
@@ -69,10 +65,7 @@ describe("Given a http", () => {
 
             mock.onGet(EVENTS_URL).reply(200, events);
 
-            const result = await get({
-                url: EVENTS_URL,
-                codec: Events,
-            })();
+            const result = await get(EVENTS_URL, Events)();
 
             expect(result).toEqual(E.right(events));
         });
@@ -82,10 +75,7 @@ describe("Given a http", () => {
 
             mock.onGet(EVENTS_URL).reply(200, eventsWithExtraData);
 
-            const result = await get({
-                url: EVENTS_URL,
-                codec: Events,
-            })();
+            const result = await get(EVENTS_URL, Events)();
 
             expect(result).toEqual(E.right(events));
         });
@@ -96,10 +86,7 @@ describe("Given a http", () => {
             mock.onGet(EVENTS_URL).reply(500, {
                 data: notEvents,
             });
-            const result = await get({
-                url: EVENTS_URL,
-                codec: Events,
-            })();
+            const result = await get(EVENTS_URL, Events)();
 
             expect(result).toEqual(
                 E.left(
@@ -130,10 +117,7 @@ describe("Given a http", () => {
             };
 
             mock.onGet(EVENTS_URL).reply(500, error);
-            const result = await get({
-                url: EVENTS_URL,
-                codec: Events,
-            })();
+            const result = await get(EVENTS_URL, Events)();
 
             expect(result).toEqual(E.left(new RemoteDataTransferError(error)));
         });
@@ -148,10 +132,7 @@ describe("Given a http", () => {
                 badResult = e;
             }
 
-            const result = await get({
-                url: badUrl,
-                codec: Events,
-            })();
+            const result = await get(badUrl, Events)();
 
             expect(result).toEqual(
                 E.left(new HTTPDataTransferError(badResult!))
