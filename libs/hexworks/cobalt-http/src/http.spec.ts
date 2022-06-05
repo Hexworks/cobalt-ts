@@ -77,6 +77,10 @@ describe("Given a http", () => {
 
             const result = await get(EVENTS_URL, Events)();
 
+            get(EVENTS_URL, Events, {
+                headers: { hi: "hello" },
+            });
+
             expect(result).toEqual(E.right(events));
         });
 

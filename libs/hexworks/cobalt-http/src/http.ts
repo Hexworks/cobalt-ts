@@ -7,7 +7,6 @@ import axios from "axios";
 import * as E from "fp-ts/Either";
 import { pipe } from "fp-ts/function";
 import * as TE from "fp-ts/TaskEither";
-import { Agent } from "http";
 import * as t from "io-ts";
 import {
     DataTransferError,
@@ -182,7 +181,7 @@ type RequestConfig = {
      * new http.Agent({ keepAlive: true })
      * ```
      */
-    httpAgent?: Agent;
+    httpAgent?: unknown;
     /**
      * Define a custom agent to be used when performing https requests in node.js.
      * This allows options to be added like `keepAlive` that are not enabled by default.
@@ -192,7 +191,7 @@ type RequestConfig = {
      * new http.Agent({ keepAlive: true })
      * ```
      */
-    httpsAgent?: Agent;
+    httpsAgent?: unknown;
     /**
      * Defines the hostname, port, and protocol of the proxy server.
      * You can also define your proxy using the conventional `http_proxy` and
