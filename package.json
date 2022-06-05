@@ -1,6 +1,6 @@
 {
     "name": "cobalt-ts",
-    "version": "2022.0.0",
+    "version": "2022.1.0-PREVIEW",
     "license": "Apache-2.0",
     "scripts": {
         "start": "nx serve",
