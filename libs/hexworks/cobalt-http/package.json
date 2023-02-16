@@ -1,6 +1,6 @@
 {
     "name": "@hexworks/cobalt-http",
-    "version": "2022.1.0-PREVIEW",
+    "version": "2022.1.1-PREVIEW",
     "description": "HTTP utilities for Cobalt.",
     "homepage": "https://github.com/Hexworks/cobalt-ts",
     "keywords": [

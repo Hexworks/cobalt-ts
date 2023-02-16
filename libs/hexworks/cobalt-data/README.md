@@ -1,3 +1,3 @@
-# Cobalt Data Abstractions
+# Cobalt Data
 
-Useful data types for Cobalt.
+Useful data types and abstractions for Cobalt.

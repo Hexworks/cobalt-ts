@@ -38,3 +38,21 @@ In case you are not familiar with functional programming and you'd like to learn
 -   [fp-ts cheatsheet](https://github.com/inato/fp-ts-cheatsheet)
 -   [fp-ts overview: Error handling, the functional way](https://troikatech.com/blog/2020/09/24/fp-ts-error-handling-the-functional-way/)
 -   [fp-ts and Beautiful API Calls](https://dev.to/gnomff_65/fp-ts-and-beautiful-api-calls-1f55)
+
+
+## Development
+
+
+### Publishing
+
+In order to publish the underlying packages of this project you need to do the following:
+
+1. Install the dependencies using `npm install`
+2. Run the build script in `script/build-all`
+3. Log in to npm: `npm login`
+4. Navigate to the specific project in the `dist` directory and run `npm publish --access public`
+5. Bump all versions to the next one
+
+You're done!
+
+
