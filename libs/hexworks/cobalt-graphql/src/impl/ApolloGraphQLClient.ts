@@ -7,14 +7,14 @@ import {
 } from "@apollo/client/core";
 import {
     ProgramError,
+    safeParseAsyncPiped,
     TaskResult,
-    toCodecValidationError,
     UnknownError,
 } from "@hexworks/cobalt-data";
 import fetch from "cross-fetch";
 import { pipe } from "fp-ts/function";
 import * as TE from "fp-ts/TaskEither";
-import * as t from "io-ts";
+import * as z from "zod";
 import { GraphQLClient } from "..";
 
 export class ApolloGraphQLClient implements GraphQLClient {
@@ -33,7 +33,7 @@ export class ApolloGraphQLClient implements GraphQLClient {
     query<T>(
         query: DocumentNode,
         vars: Record<string, unknown>,
-        codec: t.Type<T>
+        codec: z.Schema<T>
     ): TaskResult<ProgramError, T> {
         return pipe(
             TE.tryCatch(
@@ -46,16 +46,8 @@ export class ApolloGraphQLClient implements GraphQLClient {
                 },
                 (e) => new UnknownError(e)
             ),
-            TE.chainW((response) => {
-                return TE.fromEither(
-                    pipe(
-                        codec.decode(response.data),
-                        toCodecValidationError(
-                            "Validating GraphQL result failed."
-                        )
-                    )
-                );
-            })
+            TE.map((response) => response.data),
+            safeParseAsyncPiped(codec)
         );
     }
 }

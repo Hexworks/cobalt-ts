@@ -9,7 +9,7 @@ This library wraps Axios with [Functional Programming](https://github.com/gcanti
 First, you have to create an _io-ts_ codec that represents the data that you'll receive:
 
 ```ts
-import * as t from "io-ts";
+import * as z from "zod";
 
 const Events = t.array(
     t.strict({

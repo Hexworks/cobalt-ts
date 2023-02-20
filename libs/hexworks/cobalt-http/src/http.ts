@@ -1,13 +1,14 @@
 import {
     CodecValidationError,
     programErrorCodec,
+    safeParse,
     TaskResult,
 } from "@hexworks/cobalt-data";
 import axios from "axios";
 import * as E from "fp-ts/Either";
 import { pipe } from "fp-ts/function";
 import * as TE from "fp-ts/TaskEither";
-import * as t from "io-ts";
+import * as z from "zod";
 import {
     DataTransferError,
     HTTPDataTransferError,
@@ -18,7 +19,7 @@ import {
 
 const handleError = (error: unknown): DataTransferError => {
     if (axios.isAxiosError(error)) {
-        const result = programErrorCodec.decode(error.response?.data);
+        const result = safeParse(programErrorCodec, error.response?.data);
         if (E.isRight(result)) {
             const programError = result.right;
             programError.details = {
@@ -38,22 +39,6 @@ const handleError = (error: unknown): DataTransferError => {
             return new UnknownDataTransferError(error);
         }
     }
-};
-
-const decodeResponse = <T>(codec: t.Type<T>) => {
-    return TE.chainW((data: unknown) => {
-        return TE.fromEither(
-            pipe(
-                codec.decode(data),
-                E.mapLeft((e: t.Errors) => {
-                    return new CodecValidationError(
-                        `Decoding HTTP response failed.`,
-                        e
-                    );
-                })
-            )
-        );
-    });
 };
 
 type UserAndPassword = {
@@ -232,7 +217,7 @@ type RequestParams<T> = RequestConfig &
         /**
          * The codec to be used to decode the response of this request.
          */
-        codec: t.Type<T>;
+        codec: z.Schema<T>;
         /**
          * The server URL that will be used for the request.
          * Example:
@@ -265,7 +250,7 @@ export const request = <T>({
                 return handleError(error);
             }
         ),
-        decodeResponse(codec)
+        parseResponsePiped(codec)
     );
 };
 
@@ -277,7 +262,7 @@ export const get = <T>(
     /**
      * The codec to be used to decode the response of this request.
      */
-    codec: t.Type<T>,
+    codec: z.Schema<T>,
     params: RequestConfig = {}
 ): TaskResult<DataTransferError, T> => {
     return request({
@@ -296,7 +281,7 @@ export const del = <T>(
     /**
      * The codec to be used to decode the response of this request.
      */
-    codec: t.Type<T>,
+    codec: z.Schema<T>,
     params: RequestConfig & HasData = {}
 ): TaskResult<DataTransferError, T> => {
     return request({
@@ -315,7 +300,7 @@ export const head = <T>(
     /**
      * The codec to be used to decode the response of this request.
      */
-    codec: t.Type<T>,
+    codec: z.Schema<T>,
     params: RequestConfig = {}
 ): TaskResult<DataTransferError, T> => {
     return request({
@@ -334,7 +319,7 @@ export const options = <T>(
     /**
      * The codec to be used to decode the response of this request.
      */
-    codec: t.Type<T>,
+    codec: z.Schema<T>,
     params: RequestConfig = {}
 ): TaskResult<DataTransferError, T> => {
     return request({
@@ -353,7 +338,7 @@ export const post = <T>(
     /**
      * The codec to be used to decode the response of this request.
      */
-    codec: t.Type<T>,
+    codec: z.Schema<T>,
     params: RequestConfig & HasData = {}
 ): TaskResult<DataTransferError, T> => {
     return request({
@@ -372,7 +357,7 @@ export const put = <T>(
     /**
      * The codec to be used to decode the response of this request.
      */
-    codec: t.Type<T>,
+    codec: z.Schema<T>,
     params: RequestConfig & HasData = {}
 ): TaskResult<DataTransferError, T> => {
     return request({
@@ -391,7 +376,7 @@ export const patch = <T>(
     /**
      * The codec to be used to decode the response of this request.
      */
-    codec: t.Type<T>,
+    codec: z.Schema<T>,
     params: RequestConfig & HasData = {}
 ): TaskResult<DataTransferError, T> => {
     return request({

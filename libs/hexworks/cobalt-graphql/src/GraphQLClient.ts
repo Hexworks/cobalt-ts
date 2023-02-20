@@ -1,6 +1,6 @@
 import { DocumentNode } from "@apollo/client/core";
 import { ProgramError, TaskResult } from "@hexworks/cobalt-data";
-import * as t from "io-ts";
+import * as z from "zod";
 import { ApolloGraphQLClient } from "./impl";
 
 /**
@@ -14,7 +14,7 @@ export interface GraphQLClient {
     query<T>(
         query: DocumentNode,
         vars: Record<string, unknown>,
-        codec: t.Type<T>
+        codec: z.Schema<T>
     ): TaskResult<ProgramError, T>;
 }
 

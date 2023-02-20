@@ -8,9 +8,9 @@ export function notEmpty<T>(value: T | null | undefined): value is T {
 }
 
 /**
- * Throws a new `Error` with the given `msg`.
+ * Throws a new `GenericProgramError` with the given `msg`.
  */
-export const throwError = (msg: string): never => {
+export const fail = (msg: string): never => {
     throw new GenericProgramError(msg);
 };
 

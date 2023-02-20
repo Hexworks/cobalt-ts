@@ -5,7 +5,7 @@ import { CodecValidationError } from "@hexworks/cobalt-data";
 import axios, { AxiosError } from "axios";
 import MockAdapter from "axios-mock-adapter";
 import * as E from "fp-ts/Either";
-import * as t from "io-ts";
+import * as z from "zod";
 import { HTTPDataTransferError, RemoteDataTransferError } from "./errors";
 import { get, post } from "./http";
 axios.defaults.adapter = require("axios/lib/adapters/http");

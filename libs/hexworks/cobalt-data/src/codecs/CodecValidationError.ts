@@ -1,37 +1,35 @@
-import * as t from "io-ts";
 import * as E from "fp-ts/Either";
+import { ZodError } from "zod";
 import { ProgramErrorBase } from "../error";
+
+export type ErrorReport = {
+    errors: string[];
+    [name: string]: string[];
+};
 
 /**
  * Use this error to wrap codec validation errors (`Errors`) into a
  * `ProgramError`.
  */
 export class CodecValidationError extends ProgramErrorBase<"CodecValidationError"> {
-    constructor(message: string, e: t.Errors) {
+    constructor(public error: ZodError<unknown>) {
         super({
             __tag: "CodecValidationError",
-            message: message,
+            message: error.message,
             details: {
-                errorReport: e.map(
-                    (item) => `${item.value} was invalid: ${item.message}`
-                ),
+                errorReport: error.format(),
             },
         });
-    }
-
-    static fromMessage(message: string): CodecValidationError {
-        return new CodecValidationError(message, []);
     }
 }
 
 /**
- * Returns a function that maps an {@link Either} of codec validation {@link t.Errors}
+ * Returns a function that maps an {@link Either} of {@link ZodError}
  * to a {@link CodecValidationError}.
  *
  * Use this in a `pipe`.
  */
-export const toCodecValidationError: <T>(
-    message: string
-) => (fa: E.Either<t.Errors, T>) => E.Either<CodecValidationError, T> = (
-    message
-) => E.mapLeft((error: t.Errors) => new CodecValidationError(message, error));
+export const toCodecValidationError: <T>() => (
+    fa: E.Either<ZodError<unknown>, T>
+) => E.Either<CodecValidationError, T> = () =>
+    E.mapLeft((error: ZodError<unknown>) => new CodecValidationError(error));

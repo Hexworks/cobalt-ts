@@ -7,8 +7,7 @@ import { Logger } from "tslog";
 export const createLogger = (name: string) =>
     new Logger({
         name: name,
-        printLogMessageInNewLine: true,
+        type: "pretty",
         prefix: ["👉"],
-        colorizePrettyLogs: true,
-        exposeErrorCodeFrame: true,
+        stylePrettyLogs: true,
     });
