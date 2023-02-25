@@ -11,11 +11,7 @@ import {
     Todo,
 } from ".";
 import { AnyPermission, Authorization, Context, Permission, Policy } from "..";
-
-const allowAllPolicy =
-    <I>(): Policy<I> =>
-    (context: Context<I>) =>
-        TE.right(context);
+import { allowAllPolicy } from "../utils";
 
 const allowForSelfPolicy = (): Policy<Todo> => (context: Context<Todo>) => {
     const { currentUser: user, data } = context;
