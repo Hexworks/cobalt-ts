@@ -67,7 +67,6 @@ describe("Given a Fetch Http Adapter", () => {
         )();
 
         if (isLeft(result)) {
-            console.log(result.left);
             fail("Should have been successful");
         } else {
             expect(result.right.data).toEqual(EXPECTED_TODO);
@@ -81,7 +80,6 @@ describe("Given a Fetch Http Adapter", () => {
         )();
 
         if (isLeft(result)) {
-            console.log(result.left);
             fail("Should have been successful");
         } else {
             expect(result.right.data).toEqual(EXPECTED_NARROW_TODO);
@@ -110,7 +108,6 @@ describe("Given a Fetch Http Adapter", () => {
         if (isRight(result)) {
             fail("Should have failed.");
         } else {
-            console.log(result.left);
             expect(result.left).toBeInstanceOf(HTTPRequestError);
         }
     });
@@ -129,7 +126,6 @@ describe("Given a Fetch Http Adapter", () => {
         )();
 
         if (isLeft(result)) {
-            console.log(result.left);
             fail("Should have been successful");
         } else {
             const { id, ...rest } = result.right.data;

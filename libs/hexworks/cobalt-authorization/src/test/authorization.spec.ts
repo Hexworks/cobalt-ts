@@ -61,7 +61,8 @@ describe("Given some authorized operations", () => {
             await authorizedFind(TE.right(anonContext))()
         );
 
-        expect(result.data.id).toBe(todos[1].id);
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        expect(result.data.id).toBe(todos[1]!.id);
     });
     it("When trying to delete with anon", async () => {
         const result = extractLeft(

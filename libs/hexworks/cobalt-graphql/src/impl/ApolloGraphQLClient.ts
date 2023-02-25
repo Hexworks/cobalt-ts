@@ -7,7 +7,7 @@ import {
 } from "@apollo/client/core";
 import {
     ProgramError,
-    safeParseAsyncPiped,
+    safeParseAsync,
     TaskResult,
     UnknownError,
 } from "@hexworks/cobalt-data";
@@ -47,7 +47,7 @@ export class ApolloGraphQLClient implements GraphQLClient {
                 (e) => new UnknownError(e)
             ),
             TE.map((response) => response.data),
-            safeParseAsyncPiped(codec)
+            TE.chainW(safeParseAsync(codec))
         );
     }
 }

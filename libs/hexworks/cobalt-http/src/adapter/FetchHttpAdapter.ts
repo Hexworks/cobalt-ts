@@ -50,7 +50,7 @@ export const FetchHttpAdapter = (): HttpAdapter<
                         return TE.right({ data, response });
                     } else {
                         const { status, statusText, url } = response;
-                        const result = safeParse(programErrorCodec, data);
+                        const result = safeParse(programErrorCodec)(data);
                         if (E.isRight(result)) {
                             const programError = result.right;
                             programError.details = {
@@ -74,7 +74,7 @@ export const FetchHttpAdapter = (): HttpAdapter<
                     }
                 }),
                 TE.bindW("data", ({ cleanResult }) => {
-                    return safeParseAsync(schema, cleanResult.data);
+                    return safeParseAsync(schema)(cleanResult.data);
                 }),
                 TE.map(({ cleanResult, data }) => {
                     return {

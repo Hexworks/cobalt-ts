@@ -1,5 +1,5 @@
 import * as E from "fp-ts/Either";
-import { safeParse, programErrorCodec } from "..";
+import { programErrorCodec, safeParse } from "..";
 
 describe("Given an error object", () => {
     describe("without cause", () => {
@@ -12,7 +12,7 @@ describe("Given an error object", () => {
                 },
             };
 
-            const result = safeParse(programErrorCodec, error);
+            const result = safeParse(programErrorCodec)(error);
 
             expect(result).toEqual(E.right(error));
         });
@@ -33,7 +33,7 @@ describe("Given an error object", () => {
                 cause: cause,
             };
 
-            const result = safeParse(programErrorCodec, error);
+            const result = safeParse(programErrorCodec)(error);
 
             expect(result).toEqual(E.right(error));
         });

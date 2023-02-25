@@ -69,7 +69,6 @@ describe("Given a default Http Client", () => {
         )();
 
         if (isLeft(result)) {
-            console.log(result.left);
             fail("Should have been successful");
         } else {
             expect(result.right).toEqual(EXPECTED_TODO);
@@ -83,7 +82,6 @@ describe("Given a default Http Client", () => {
         )();
 
         if (isLeft(result)) {
-            console.log(result.left);
             fail("Should have been successful");
         } else {
             expect(result.right).toEqual(EXPECTED_NARROW_TODO);
@@ -126,7 +124,6 @@ describe("Given a default Http Client", () => {
         )();
 
         if (isLeft(result)) {
-            console.log(result.left);
             fail("Should have been successful");
         } else {
             const { id, ...rest } = result.right;
@@ -207,7 +204,6 @@ describe("Given a default Http Client", () => {
         )();
 
         if (isLeft(result)) {
-            console.log(result.left);
             fail("Should have been successful");
         } else {
             expect(result.right).toEqual({});

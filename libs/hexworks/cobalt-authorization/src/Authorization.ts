@@ -74,7 +74,7 @@ export const authorize = <I, O, E extends ProgramError>(
                 const permissions = pipe(
                     Object.keys(roles),
                     A.filter((role) => user.roles.includes(role)),
-                    A.chain((role) => roles[role].permissions),
+                    A.chain((role) => roles[role]?.permissions ?? []),
                     getPermissionFilterFor(operation)
                 );
 

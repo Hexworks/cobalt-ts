@@ -1,6 +1,6 @@
 {
     "name": "@hexworks/cobalt-authorization",
-    "version": "2022.1.1-PREVIEW",
+    "version": "2023.0.0-RELEASE",
     "description": "Authorization utilities for Cobalt.",
     "homepage": "https://github.com/Hexworks/cobalt-ts",
     "keywords": [
@@ -23,8 +23,6 @@
     ],
     "license": "Apache-2.0",
     "peerDependencies": {
-        "fp-ts": "^2.11.4",
-        "tslog": "^3.2.2",
-        "io-ts": "^2.2.16"
+        "fp-ts": "^2.13.1"
     }
 }
