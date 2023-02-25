@@ -39,7 +39,7 @@ export type AnyPermission = Permission<any, any>;
  * ```
  */
 export const getPermissionFilterFor =
-    <I, O>(operation: Operation<I, O>) =>
+    <I, O, D = unknown>(operation: Operation<I, O, D>) =>
     (permissions: AnyPermission[]): Permission<I, O>[] => {
         return permissions.filter(
             (permission) => permission.operationName === operation.name

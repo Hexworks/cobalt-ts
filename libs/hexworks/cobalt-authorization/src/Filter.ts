@@ -1,10 +1,10 @@
-import { ProgramError, TaskResult } from "@hexworks/cobalt-data";
+import { ContextOperationResult } from ".";
 import { Context } from "./Context";
 
 /**
  * A `Filter` can be used to alter the results of an operation after it
  * was executed.
  */
-export type Filter<O> = (
+export type Filter<O, D = unknown> = (
     context: Context<O>
-) => TaskResult<ProgramError, Context<O>>;
+) => ContextOperationResult<O, D>;

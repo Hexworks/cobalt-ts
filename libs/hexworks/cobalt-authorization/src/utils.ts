@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { AuthorizedOperation, Context, Operation, Permission, Policy } from ".";
-import * as TE from "fp-ts/TaskEither";
+import * as RTE from "fp-ts/ReaderTaskEither";
 
 /**
  * This type will match the shape of any function that can be used to construct
@@ -14,7 +14,7 @@ export type OperationFactory = (...args: any[]) => Operation<any, any>;
 export const allowAllPolicy =
     <I>(): Policy<I> =>
     (context: Context<I>) =>
-        TE.right(context);
+        RTE.right(context);
 
 /**
  * Creates a {@link Permission} for a given {@link OperationFactory}

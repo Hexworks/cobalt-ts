@@ -1,5 +1,6 @@
-import { ProgramError, TaskResult } from "@hexworks/cobalt-data";
+import { ProgramError } from "@hexworks/cobalt-data";
 import { Context } from "./Context";
+import { OperationResult } from "./Operation";
 
 /**
  * A `Policy` can be used to determine whether an operation can be executed
@@ -10,4 +11,4 @@ import { Context } from "./Context";
  */
 export type Policy<I> = (
     context: Context<I>
-) => TaskResult<ProgramError, Context<I>>;
+) => OperationResult<ProgramError, Context<I>>;

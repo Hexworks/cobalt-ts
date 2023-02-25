@@ -1,6 +1,6 @@
 import { pipe } from "fp-ts/lib/function";
 import * as O from "fp-ts/Option";
-import * as TE from "fp-ts/TaskEither";
+import * as RTE from "fp-ts/ReaderTaskEither";
 import {
     completeTodo,
     deleteTodo,
@@ -16,15 +16,15 @@ import { allowAllPolicy } from "../utils";
 const allowForSelfPolicy = (): Policy<Todo> => (context: Context<Todo>) => {
     const { currentUser: user, data } = context;
     if (user.id === data.owner.id) {
-        return TE.right(context);
+        return RTE.right(context);
     } else {
-        return TE.left(new MissingPermissionError());
+        return RTE.left(new MissingPermissionError());
     }
 };
 
 const filterOnlyPublished = () => (context: Context<Todo[]>) => {
     const { data } = context;
-    return TE.right({
+    return RTE.right({
         ...context,
         data: data.filter((d) => {
             return pipe(
@@ -41,7 +41,7 @@ const filterOnlyPublished = () => (context: Context<Todo[]>) => {
 
 const filterCompletedVisibilityForAnon = () => (context: Context<Todo[]>) => {
     const { data } = context;
-    return TE.right({
+    return RTE.right({
         ...context,
         data: data.map((d) => {
             return {

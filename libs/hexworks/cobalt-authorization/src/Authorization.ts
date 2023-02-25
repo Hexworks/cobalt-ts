@@ -1,7 +1,7 @@
 import { ProgramError, TaskResult } from "@hexworks/cobalt-data";
 import * as A from "fp-ts/Array";
 import { pipe } from "fp-ts/function";
-import * as TE from "fp-ts/TaskEither";
+import * as RTE from "fp-ts/ReaderTaskEither";
 import {
     AnyUser,
     AuthorizationError,
@@ -9,6 +9,7 @@ import {
     Filter,
     getPermissionFilterFor,
     Operation,
+    OperationResult,
     Policy,
     Role,
 } from ".";
@@ -31,7 +32,13 @@ export interface AuthorizedOperationBrand {
     readonly _: unique symbol;
 }
 
-export type ContextTaskEither<T> = TaskResult<ProgramError, Context<T>>;
+export type ContextTaskResult<T> = TaskResult<ProgramError, Context<T>>;
+
+export type ContextOperationResult<T, D = unknown> = OperationResult<
+    ProgramError,
+    Context<T>,
+    D
+>;
 
 /**
  * An `AuthorizedOperation` is an {@link Operation} that has been authorized
@@ -52,22 +59,22 @@ export type ContextTaskEither<T> = TaskResult<ProgramError, Context<T>>;
  * )
  * ```
  */
-export type AuthorizedOperation<I, O> = (
-    input: ContextTaskEither<I>
-) => ContextTaskEither<O> & AuthorizedOperationBrand;
+export type AuthorizedOperation<I, O, D = unknown> = (
+    input: ContextOperationResult<I>
+) => ContextOperationResult<O, D> & AuthorizedOperationBrand;
 
 /**
  * Takes an {@link Operation} and augments it with the given `authorization` information.
  * After an `Operation` is authorized it is safe to call it with any {@link Context} object.
  */
-export const authorize = <I, O, E extends ProgramError>(
-    operation: Operation<I, O>,
+export const authorize = <I, O, D = unknown>(
+    operation: Operation<I, O, D>,
     authorization: Authorization
-): AuthorizedOperation<I, O> => {
-    return ((input: TaskResult<E, Context<I>>) => {
+): AuthorizedOperation<I, O, D> => {
+    return ((input: ContextOperationResult<I>) => {
         return pipe(
             input,
-            TE.chainW((context: Context<I>) => {
+            RTE.chainW((context: Context<I>) => {
                 const { currentUser: user } = context;
                 const roles = authorization.roles;
 
@@ -89,7 +96,7 @@ export const authorize = <I, O, E extends ProgramError>(
                 );
 
                 if (policies.length === 0) {
-                    return TE.left(
+                    return RTE.left(
                         new AuthorizationError(
                             `Current user ${user.name} has no permission to perform ${operation.name}`
                         ) as ProgramError
@@ -105,20 +112,23 @@ export const authorize = <I, O, E extends ProgramError>(
                 return applyFilters(filters, result);
             })
         );
-    }) as AuthorizedOperation<I, O>;
+    }) as AuthorizedOperation<I, O, D>;
 };
 
 const evaluatePolicies = <I>(context: Context<I>) =>
-    A.reduce<Policy<I>, TaskResult<ProgramError, Context<I>>>(
-        TE.right(context),
-        (acc, policy) => pipe(acc, TE.chain(policy))
+    A.reduce<Policy<I>, OperationResult<ProgramError, Context<I>>>(
+        RTE.right(context),
+        (acc, policy) => pipe(acc, RTE.chain(policy))
     );
 
-const executeOperation = <I, O>(operation: Operation<I, O>, user: AnyUser) =>
-    TE.chain((context: Context<I>) =>
+const executeOperation = <I, O, D>(
+    operation: Operation<I, O, D>,
+    user: AnyUser
+) =>
+    RTE.chain((context: Context<I>) =>
         pipe(
             operation.execute(context.data),
-            TE.map((output: O) => {
+            RTE.map((output: O) => {
                 return {
                     currentUser: user,
                     data: output,
@@ -127,14 +137,14 @@ const executeOperation = <I, O>(operation: Operation<I, O>, user: AnyUser) =>
         )
     );
 
-const applyFilters = <O>(
+const applyFilters = <O, D>(
     filters: Filter<O>[],
-    result: TaskResult<ProgramError, Context<O>>
+    result: ContextOperationResult<O, D>
 ) =>
     pipe(
         filters,
-        A.reduce<Filter<O>, TaskResult<ProgramError, Context<O>>>(
+        A.reduce<Filter<O, D>, ContextOperationResult<O, D>>(
             result,
-            (acc, filter) => pipe(acc, TE.chain(filter))
+            (acc, filter) => pipe(acc, RTE.chain(filter))
         )
     );
