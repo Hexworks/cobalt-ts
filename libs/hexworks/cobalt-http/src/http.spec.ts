@@ -1,146 +1,216 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
-import { extractLeft } from "@hexworks/cobalt-core";
+import { fail } from "@hexworks/cobalt-core";
 import { CodecValidationError } from "@hexworks/cobalt-data";
-import axios, { AxiosError } from "axios";
-import MockAdapter from "axios-mock-adapter";
-import * as E from "fp-ts/Either";
+import cuid from "cuid";
+import { isLeft, isRight } from "fp-ts/Either";
 import * as z from "zod";
-import { HTTPDataTransferError, RemoteDataTransferError } from "./errors";
-import { get, post } from "./http";
-axios.defaults.adapter = require("axios/lib/adapters/http");
+import { HTTPRequestError } from "./errors";
+import { get, head, options, post, put, patch, del } from "./http";
 
-const Events = t.array(
-    t.strict({
-        id: t.number,
-        name: t.string,
-    })
-);
+const TODO = z.object({
+    userId: z.number(),
+    id: z.number(),
+    title: z.string(),
+    completed: z.boolean(),
+});
 
-const events = [
-    {
-        id: 1,
-        name: "Event 1",
-    },
-    {
-        id: 2,
-        name: "Event 2",
-    },
-];
+const NARROW_TODO = z.object({
+    id: z.number(),
+    title: z.string(),
+    completed: z.boolean(),
+});
 
-const eventsWithExtraData = [
-    {
-        id: 1,
-        name: "Event 1",
-        extra: 1,
-    },
-    {
-        id: 2,
-        name: "Event 2",
-        extra: 2,
-    },
-];
+const INVALID_TODO = z.object({
+    xul: z.number(),
+    id: z.number(),
+    title: z.string(),
+    completed: z.boolean(),
+});
 
-const notEvents = {
-    something: "else",
+const POST = z.object({
+    userId: z.number(),
+    id: z.number(),
+    title: z.string(),
+    body: z.string(),
+});
+
+const EXPECTED_TODO = {
+    userId: 1,
+    id: 1,
+    title: "delectus aut autem",
+    completed: false,
 };
 
-const EVENTS_URL = "/events";
+const EXPECTED_NARROW_TODO = {
+    id: 1,
+    title: "delectus aut autem",
+    completed: false,
+};
 
-describe("Given a http", () => {
-    describe("post call", () => {
-        it("When it is valid Then it should return a value", async () => {
-            const mock = new MockAdapter(axios);
+const NEW_POST = {
+    title: "foo",
+    body: "bar",
+    userId: 1,
+};
 
-            mock.onPost(EVENTS_URL).reply(200, events);
+const POST_UPDATE = {
+    id: 1,
+    title: "foo",
+    body: "bar",
+    userId: 1,
+};
 
-            const result = await post("/events", Events)();
+describe("Given a default Http Client", () => {
+    test("When fetching a valid todo Then it should be successful", async () => {
+        const result = await get(
+            "https://jsonplaceholder.typicode.com/todos/1",
+            TODO
+        )();
 
-            expect(result).toEqual(E.right(events));
-        });
+        if (isLeft(result)) {
+            console.log(result.left);
+            fail("Should have been successful");
+        } else {
+            expect(result.right).toEqual(EXPECTED_TODO);
+        }
     });
-    describe("get call", () => {
-        it("When it is valid Then it should return a value", async () => {
-            const mock = new MockAdapter(axios);
 
-            mock.onGet(EVENTS_URL).reply(200, events);
+    test("When fetching a todo with a narrower codec Then the extra fields should be removed", async () => {
+        const result = await get(
+            "https://jsonplaceholder.typicode.com/todos/1",
+            NARROW_TODO
+        )();
 
-            const result = await get(EVENTS_URL, Events)();
+        if (isLeft(result)) {
+            console.log(result.left);
+            fail("Should have been successful");
+        } else {
+            expect(result.right).toEqual(EXPECTED_NARROW_TODO);
+        }
+    });
 
-            expect(result).toEqual(E.right(events));
-        });
+    test("When fetching an invalid todo Then it should fail", async () => {
+        const result = await get(
+            "https://jsonplaceholder.typicode.com/todos/1",
+            INVALID_TODO
+        )();
 
-        it("When it is valid with extra data Then it should return the data with the exra bits stripped", async () => {
-            const mock = new MockAdapter(axios);
+        if (isRight(result)) {
+            fail("Should have failed.");
+        } else {
+            expect(result.left).toBeInstanceOf(CodecValidationError);
+        }
+    });
 
-            mock.onGet(EVENTS_URL).reply(200, eventsWithExtraData);
+    test("When fetching from an invalid url Then it should fail", async () => {
+        const result = await get(`https://${cuid()}.com/todos/1`, TODO)();
 
-            const result = await get(EVENTS_URL, Events)();
+        if (isRight(result)) {
+            fail("Should have failed.");
+        } else {
+            expect(result.left).toBeInstanceOf(HTTPRequestError);
+        }
+    });
 
-            get(EVENTS_URL, Events, {
-                headers: { hi: "hello" },
-            });
-
-            expect(result).toEqual(E.right(events));
-        });
-
-        it("When the response is invalid Then an error is returned", async () => {
-            const mock = new MockAdapter(axios);
-
-            mock.onGet(EVENTS_URL).reply(500, {
-                data: notEvents,
-            });
-            const result = await get(EVENTS_URL, Events)();
-
-            expect(result).toEqual(
-                E.left(
-                    new CodecValidationError(
-                        "HTTP data transfer failed.",
-                        extractLeft(Events.decode(notEvents))
-                    )
-                )
-            );
-        });
-
-        it("When the response is a program error Then it is properly converted", async () => {
-            const mock = new MockAdapter(axios);
-            const cause = {
-                __tag: "CauseError",
-                message: "Something went horribly wrong",
-                details: {
-                    becauseOf: "Some other reason",
+    test("When creating a todo Then it should be successful", async () => {
+        const result = await post(
+            "https://jsonplaceholder.typicode.com/posts",
+            POST,
+            {
+                body: JSON.stringify(NEW_POST),
+                headers: {
+                    "Content-type": "application/json; charset=UTF-8",
                 },
-            };
-            const error = {
-                __tag: "ProgramError",
-                message: "Something went wrong",
-                details: {
-                    becauseOf: "Some reason",
-                },
-                cause: cause,
-            };
-
-            mock.onGet(EVENTS_URL).reply(500, error);
-            const result = await get(EVENTS_URL, Events)();
-
-            expect(result).toEqual(E.left(new RemoteDataTransferError(error)));
-        });
-
-        it("When the endpoint doesn't exist Then it returns a HTTP error", async () => {
-            const badUrl = "http://wersadfwefsdafewfasdfweasd.com";
-
-            let badResult: AxiosError | undefined = undefined;
-            try {
-                await axios.get(badUrl);
-            } catch (e: any) {
-                badResult = e;
             }
+        )();
 
-            const result = await get(badUrl, Events)();
+        if (isLeft(result)) {
+            console.log(result.left);
+            fail("Should have been successful");
+        } else {
+            const { id, ...rest } = result.right;
+            expect(rest).toEqual(NEW_POST);
+        }
+    });
 
-            expect(result).toEqual(
-                E.left(new HTTPDataTransferError(badResult!))
+    test("When performing an options request Then it should be successful", async () => {
+        const result = await options(
+            "https://jsonplaceholder.typicode.com/posts"
+        )();
+
+        if (isLeft(result)) {
+            fail("Should have been successful");
+        } else {
+            expect(
+                result.right.headers.get("Access-Control-Allow-Methods")
+            ).toEqual("GET,HEAD,PUT,PATCH,POST,DELETE");
+        }
+    });
+
+    test("When performing a head request Then it should be successful", async () => {
+        const result = await head(
+            "https://jsonplaceholder.typicode.com/posts"
+        )();
+
+        if (isLeft(result)) {
+            fail("Should have been successful");
+        } else {
+            expect(result.right.headers.get("Content-Type")).toEqual(
+                "application/json; charset=utf-8"
             );
-        });
+        }
+    });
+
+    test("When performing a put request Then it should be successful", async () => {
+        const result = await put(
+            "https://jsonplaceholder.typicode.com/posts/1",
+            POST,
+            {
+                body: JSON.stringify(POST_UPDATE),
+                headers: {
+                    "Content-type": "application/json; charset=UTF-8",
+                },
+            }
+        )();
+
+        if (isLeft(result)) {
+            fail("Should have been successful");
+        } else {
+            expect(result.right).toEqual(POST_UPDATE);
+        }
+    });
+
+    test("When performing a patch request Then it should be successful", async () => {
+        const result = await patch(
+            "https://jsonplaceholder.typicode.com/posts/1",
+            POST,
+            {
+                body: JSON.stringify(POST_UPDATE),
+                headers: {
+                    "Content-type": "application/json; charset=UTF-8",
+                },
+            }
+        )();
+
+        if (isLeft(result)) {
+            fail("Should have been successful");
+        } else {
+            expect(result.right).toEqual(POST_UPDATE);
+        }
+    });
+
+    test("When performing a delete request Then it should be successful", async () => {
+        const result = await del(
+            "https://jsonplaceholder.typicode.com/posts/1",
+            z.object({})
+        )();
+
+        if (isLeft(result)) {
+            console.log(result.left);
+            fail("Should have been successful");
+        } else {
+            expect(result.right).toEqual({});
+        }
     });
 });

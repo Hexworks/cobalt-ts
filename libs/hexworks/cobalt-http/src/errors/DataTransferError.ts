@@ -1,12 +1,12 @@
 import { CodecValidationError } from "@hexworks/cobalt-data";
 import { HTTPDataTransferError } from "./HTTPDataTransferError";
-import { InternalDataTransferError } from "./InternalDataTransferError";
+import { HTTPRequestError } from "./HTTPRequestError";
 import { RemoteDataTransferError } from "./RemoteDataTransferError";
 import { UnknownDataTransferError } from "./UnknownDataTransferError";
 
 export type DataTransferError =
     | HTTPDataTransferError
     | CodecValidationError
-    | InternalDataTransferError
+    | HTTPRequestError
     | RemoteDataTransferError
     | UnknownDataTransferError;

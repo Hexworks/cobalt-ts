@@ -1,5 +1,5 @@
 export * from "./DataTransferError";
 export * from "./HTTPDataTransferError";
-export * from "./InternalDataTransferError";
+export * from "./HTTPRequestError";
 export * from "./RemoteDataTransferError";
 export * from "./UnknownDataTransferError";
