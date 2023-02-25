@@ -2,10 +2,18 @@
 
 declare -A projects
 projects=(
-    ["project-name"]="project/path"
+    ["cobalt-authorization"]="libs/hexworks/cobalt-authorization"
+    ["cobalt-core"]="libs/hexworks/cobalt-core"
+    ["cobalt-data"]="libs/hexworks/cobalt-data"
+    ["cobalt-graphql"]="libs/hexworks/cobalt-graphql"
+    ["cobalt-http"]="libs/hexworks/cobalt-http"
 )
 
 declare -A project_names
 project_names=(
-    ["project-shorthand"]="project-name"
+    ["authorization"]="cobalt-authorization"
+    ["core"]="cobalt-core"
+    ["data"]="cobalt-data"
+    ["graphql"]="cobalt-graphql"
+    ["http"]="cobalt-http"
 )

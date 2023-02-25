@@ -8,9 +8,9 @@ print_usage() {
     echo "💀 $1"
     echo "Help below 👇"
     echo ""
-    echo "Runs the given project. Will only work after performing a ./build."
+    echo "Publishes the given package. Will only work after performing a ./build-all."
     echo ""
-    echo "Usage: ./run <project>"
+    echo "Usage: ./publish <project>"
     ./projects
     exit 1
 }
@@ -19,6 +19,6 @@ if [ -z "$1" ]; then
     print_usage "Project name is missing!"
 fi
 
-cd ..
+cd ../dist/libs/hexworks/${project_names[$1]}
 
-node dist/apps/${project_names[$1]}/main.js
+npm publish --access public
