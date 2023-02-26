@@ -1,6 +1,6 @@
 {
     "name": "@hexworks/cobalt-data",
-    "version": "2023.0.0-RELEASE",
+    "version": "2023.1.0-RELEASE",
     "description": "Useful data types for Cobalt.",
     "homepage": "https://github.com/Hexworks/cobalt-ts",
     "keywords": [

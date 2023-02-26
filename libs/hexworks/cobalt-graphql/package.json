@@ -1,6 +1,6 @@
 {
     "name": "@hexworks/cobalt-graphql",
-    "version": "2023.0.0-RELEASE",
+    "version": "2023.1.0-RELEASE",
     "description": "GraphQL Client for Cobalt.",
     "homepage": "https://github.com/Hexworks/cobalt-ts",
     "keywords": [
