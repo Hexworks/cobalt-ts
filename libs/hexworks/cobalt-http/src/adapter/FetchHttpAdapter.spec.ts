@@ -4,7 +4,6 @@ import { CodecValidationError } from "@hexworks/cobalt-data";
 import { isLeft, isRight } from "fp-ts/lib/Either";
 import { z } from "zod";
 import { FetchHttpAdapter } from "./FetchHttpAdapter";
-import cuid from "cuid";
 import { HTTPRequestError } from "../errors";
 
 const TODO = z.object({
@@ -52,6 +51,8 @@ const NEW_POST = {
     body: "bar",
     userId: 1,
 };
+
+const RANDOM_STRING = "jfwklehaiosdhlwioeahfloisewff";
 
 describe("Given a Fetch Http Adapter", () => {
     let target: ReturnType<typeof FetchHttpAdapter>;
@@ -101,7 +102,7 @@ describe("Given a Fetch Http Adapter", () => {
 
     test("When fetching from an invalid url Then it should fail", async () => {
         const result = await target.fetchJson(
-            `https://${cuid()}.com/todos/1`,
+            `https://${RANDOM_STRING}.com/todos/1`,
             TODO
         )();
 

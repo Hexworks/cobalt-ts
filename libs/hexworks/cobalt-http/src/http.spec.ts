@@ -2,11 +2,10 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 import { fail } from "@hexworks/cobalt-core";
 import { CodecValidationError } from "@hexworks/cobalt-data";
-import cuid from "cuid";
 import { isLeft, isRight } from "fp-ts/Either";
 import * as z from "zod";
 import { HTTPRequestError } from "./errors";
-import { get, head, options, post, put, patch, del } from "./http";
+import { del, get, head, options, patch, post, put } from "./http";
 
 const TODO = z.object({
     userId: z.number(),
@@ -61,6 +60,8 @@ const POST_UPDATE = {
     userId: 1,
 };
 
+const RANDOM_STRING = "jfwklehaiosdhlwioeahfloisewff";
+
 describe("Given a default Http Client", () => {
     test("When fetching a valid todo Then it should be successful", async () => {
         const result = await get(
@@ -102,7 +103,10 @@ describe("Given a default Http Client", () => {
     });
 
     test("When fetching from an invalid url Then it should fail", async () => {
-        const result = await get(`https://${cuid()}.com/todos/1`, TODO)();
+        const result = await get(
+            `https://${RANDOM_STRING}.com/todos/1`,
+            TODO
+        )();
 
         if (isRight(result)) {
             fail("Should have failed.");
