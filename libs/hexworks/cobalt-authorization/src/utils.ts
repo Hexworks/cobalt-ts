@@ -1,18 +1,20 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { AuthorizedOperation, Context, Operation, Permission, Policy } from ".";
 import * as RTE from "fp-ts/ReaderTaskEither";
-
-/**
- * This type will match the shape of any function that can be used to construct
- * an {@link Operation}.
- */
-export type OperationFactory = (...args: any[]) => Operation<any, any>;
+import {
+    AuthorizedOperation,
+    Context,
+    Operation,
+    OperationDependencies,
+    Permission,
+    Policy,
+    PreparedOperation,
+} from ".";
 
 /**
  * Shorthand for creating a {@link Policy} that always allows the operation.
  */
 export const allowAllPolicy =
-    <I>(): Policy<I> =>
+    <I, D>(): Policy<I, D> =>
     (context: Context<I>) =>
         RTE.right(context);
 
@@ -24,28 +26,42 @@ export const allowAllPolicy =
  * function for it. This allows the creation of an {@link Authorization} object
  * in a static manner before the actual operation(s) are created.
  */
-export const allow = <T extends OperationFactory>(opFn: T): PermissionOf<T> => {
+export const allow = <
+    I,
+    O,
+    D extends OperationDependencies,
+    T extends Operation<I, O, D>
+>(
+    operation: T
+): Permission<I, O, D> => {
     return {
-        name: `Allow ${opFn.name} for all`,
-        operationName: opFn.name,
+        name: `Allow ${operation.name} for all`,
+        operationName: operation.name,
         policies: [allowAllPolicy()],
-    } as PermissionOf<T>;
+    };
 };
 
 /**
  * Infers a {@link Permission} type from a generic {@link OperationFactory} type.
  */
-export type PermissionOf<T> = T extends (
-    ...args: any[]
-) => Operation<infer I, infer O>
-    ? Permission<I, O>
+export type PermissionOf<T> = T extends Operation<infer I, infer O, infer D>
+    ? Permission<I, O, D>
     : never;
 
 /**
- * Infers a generic {@link AuthorizedOperation} type from a {@link OperationFactory} type.
+ * Infers a generic {@link AuthorizedOperation} type from an {@link Operation} type.
  */
-export type AuthorizedOperationOf<T> = T extends (
-    ...args: any[]
-) => Operation<infer I, infer O>
-    ? AuthorizedOperation<I, O>
+export type AuthorizedOperationOf<T> = T extends Operation<
+    infer I,
+    infer O,
+    infer D
+>
+    ? AuthorizedOperation<I, O, D>
+    : never;
+
+/**
+ * Infers a generic {@link PreparedOperation} type from an {@link Operation} type.
+ */
+export type PreparedOperationOf<T> = T extends Operation<infer I, infer O, any>
+    ? PreparedOperation<I, O>
     : never;

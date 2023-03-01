@@ -1,7 +1,7 @@
 import { pipe } from "fp-ts/lib/function";
 import * as O from "fp-ts/Option";
-import * as RTE from "fp-ts/ReaderTaskEither";
-import { Operation } from "..";
+import { ask, chain, left, right } from "fp-ts/ReaderTaskEither";
+import { OperationDependencies } from "../Operation";
 import { TodoNotFoundError } from "./errors";
 import { todos } from "./fixtures";
 import { Todo } from "./Todo";
@@ -10,53 +10,40 @@ export type NotificationService = {
     notify(message: string): void;
 };
 
-export type Deps = {
+export type Deps = OperationDependencies & {
     notificationService: NotificationService;
 };
 
-export const findAllTodos: Operation<void, Array<Todo>> = {
-    name: "findAllTodos",
-    execute: () => {
-        return RTE.right(Object.values(todos));
-    },
+export const findAllTodos = () => {
+    return right(Object.values(todos));
 };
 
-export const findTodo: Operation<number, Todo> = {
-    name: "findTodo",
-    execute: (id: number) => {
-        const todo = todos[id];
-        if (todo) {
-            return RTE.right(todo);
-        } else {
-            return RTE.left(new TodoNotFoundError(id));
-        }
-    },
+export const findTodo = (id: number) => {
+    const todo = todos[id];
+    if (todo) {
+        return right(todo);
+    } else {
+        return left(new TodoNotFoundError(id));
+    }
 };
 
-export const completeTodo: Operation<Todo, Todo, Deps> = {
-    name: "completeTodo",
-    execute: (input: Todo) => {
-        input.completed = O.some(true);
-        return pipe(
-            RTE.ask<Deps>(),
-            RTE.chain(({ notificationService }) => {
-                notificationService.notify(`Todo ${input.id} completed`);
-                return RTE.right(input);
-            })
-        );
-    },
+export const completeTodo = (input: Todo) => {
+    input.completed = O.some(true);
+    return pipe(
+        ask<Deps>(),
+        chain(({ notificationService }) => {
+            notificationService.notify(`Todo ${input.id} completed`);
+            return right(input);
+        })
+    );
 };
-
-export const deleteTodo: Operation<Todo, void, Deps> = {
-    name: "deleteTodo",
-    execute: (input: Todo) => {
-        input.completed = O.some(true);
-        return pipe(
-            RTE.ask<Deps>(),
-            RTE.chain(({ notificationService }) => {
-                notificationService.notify(`Todo ${input.id} deleted`);
-                return RTE.right(undefined);
-            })
-        );
-    },
+export const deleteTodo = (input: Todo) => {
+    input.completed = O.some(true);
+    return pipe(
+        ask<Deps>(),
+        chain(({ notificationService }) => {
+            notificationService.notify(`Todo ${input.id} deleted`);
+            return right(undefined);
+        })
+    );
 };

@@ -7,7 +7,7 @@ import { authorize } from "../Authorization";
 import { Context } from "../Context";
 import { authorization } from "./authorization";
 import { anonUser, todos, userJane, userJohn } from "./fixtures";
-import { deleteTodo, findAllTodos, findTodo } from "./operations";
+import { deleteTodo, Deps, findAllTodos, findTodo } from "./operations";
 
 describe("Given some authorized operations", () => {
     const notificationService = {
@@ -15,9 +15,14 @@ describe("Given some authorized operations", () => {
         notify(): void {},
     };
 
-    const authorizedFind = authorize(findTodo, authorization);
-    const authorizedDelete = authorize(deleteTodo, authorization);
-    const authorizedFindAll = authorize(findAllTodos, authorization);
+    const deps: Deps = {
+        notificationService,
+        authorization,
+    };
+
+    const authorizedFind = authorize(findTodo);
+    const authorizedDelete = authorize(deleteTodo);
+    const authorizedFindAll = authorize(findAllTodos);
 
     const anonContext: Context<number> = {
         currentUser: anonUser,
@@ -33,7 +38,7 @@ describe("Given some authorized operations", () => {
         const result = extractRight(
             await authorizedFindAll(
                 RTE.right({ currentUser: anonUser, data: undefined })
-            )({})()
+            )(deps)()
         ).data.map((todo) => ({
             id: todo.id,
             completed: todo.completed,
@@ -49,7 +54,7 @@ describe("Given some authorized operations", () => {
         const result = extractRight(
             await authorizedFindAll(
                 RTE.right({ currentUser: userJohn, data: undefined })
-            )({})()
+            )(deps)()
         ).data.map((todo) => ({
             id: todo.id,
             completed: todo.completed,
@@ -63,7 +68,7 @@ describe("Given some authorized operations", () => {
 
     it("When trying to find", async () => {
         const result = extractRight(
-            await authorizedFind(RTE.right(anonContext))({})()
+            await authorizedFind(RTE.right(anonContext))(deps)()
         );
 
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
@@ -75,9 +80,7 @@ describe("Given some authorized operations", () => {
                 RTE.right(anonContext),
                 authorizedFind,
                 authorizedDelete
-            )({
-                notificationService,
-            })()
+            )(deps)()
         );
 
         expect(result).toEqual(
@@ -92,9 +95,7 @@ describe("Given some authorized operations", () => {
                 RTE.right(janesContext),
                 authorizedFind,
                 authorizedDelete
-            )({
-                notificationService,
-            })()
+            )(deps)()
         );
 
         expect(result.data).toBeUndefined();

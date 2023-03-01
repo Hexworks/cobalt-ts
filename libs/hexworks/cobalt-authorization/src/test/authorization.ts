@@ -10,10 +10,10 @@ import {
     roles,
     Todo,
 } from ".";
-import { AnyPermission, Authorization, Context, Permission, Policy } from "..";
-import { allowAllPolicy } from "../utils";
+import { AnyPermission, Authorization, Context } from "..";
+import { allow, allowAllPolicy } from "../utils";
 
-const allowForSelfPolicy = (): Policy<Todo> => (context: Context<Todo>) => {
+const allowForSelfPolicy = (context: Context<Todo>) => {
     const { currentUser: user, data } = context;
     if (user.id === data.owner.id) {
         return RTE.right(context);
@@ -22,7 +22,7 @@ const allowForSelfPolicy = (): Policy<Todo> => (context: Context<Todo>) => {
     }
 };
 
-const filterOnlyPublished = () => (context: Context<Todo[]>) => {
+const filterOnlyPublished = (context: Context<Todo[]>) => {
     const { data } = context;
     return RTE.right({
         ...context,
@@ -39,7 +39,7 @@ const filterOnlyPublished = () => (context: Context<Todo[]>) => {
     });
 };
 
-const filterCompletedVisibilityForAnon = () => (context: Context<Todo[]>) => {
+const filterCompletedVisibilityForAnon = (context: Context<Todo[]>) => {
     const { data } = context;
     return RTE.right({
         ...context,
@@ -55,67 +55,55 @@ const filterCompletedVisibilityForAnon = () => (context: Context<Todo[]>) => {
     });
 };
 
-const allowFindPublishedTodosForAnon: Permission<void, Todo[]> = {
+const allowFindPublishedTodosForAnon = {
     name: "Allow find all todos for anybody",
     operationName: findAllTodos.name,
     policies: [allowAllPolicy()],
-    filters: [filterOnlyPublished(), filterCompletedVisibilityForAnon()],
+    filters: [filterOnlyPublished, filterCompletedVisibilityForAnon],
 };
 
-const allowFindPublishedTodosForUser: Permission<void, Todo[]> = {
+const allowFindPublishedTodosForUser = {
     name: "Allow find all todos for user",
     operationName: findAllTodos.name,
     policies: [allowAllPolicy()],
-    filters: [filterOnlyPublished()],
+    filters: [filterOnlyPublished],
 };
 
-const allowFindTodosForAdmin: Permission<void, Todo[]> = {
+const allowFindTodosForAdmin = {
     name: "Allow find all todos for user",
     operationName: findAllTodos.name,
     policies: [allowAllPolicy()],
 };
 
-const allowFindTodoForAnybody: Permission<number, Todo> = {
-    name: "Allow find todo for anybody",
-    operationName: findTodo.name,
-    policies: [allowAllPolicy()],
-};
-
-const allowCompleteTodoForSelf: Permission<Todo, Todo> = {
+const allowCompleteTodoForSelf = {
     name: "Allow complete todo for self",
     operationName: completeTodo.name,
-    policies: [allowForSelfPolicy()],
+    policies: [allowForSelfPolicy],
 };
 
-const allowDeleteTodoForSelf: Permission<Todo, void> = {
+const allowDeleteTodoForSelf = {
     name: "Allow delete todo for self",
     operationName: deleteTodo.name,
-    policies: [allowForSelfPolicy()],
-};
-
-const allowDeleteTodoForAll: Permission<Todo, void> = {
-    name: "Allow delete todo for all",
-    operationName: deleteTodo.name,
-    policies: [allowAllPolicy()],
+    policies: [allowForSelfPolicy],
 };
 
 const anonymousPermissions: AnyPermission[] = [
     allowFindPublishedTodosForAnon,
-    allowFindTodoForAnybody,
+    allow(findTodo),
 ];
 
 const userPermissions: AnyPermission[] = [
     allowFindPublishedTodosForUser,
-    allowFindTodoForAnybody,
+    allow(findTodo),
     allowCompleteTodoForSelf,
     allowDeleteTodoForSelf,
 ];
 
 const adminPermissions: AnyPermission[] = [
     allowFindTodosForAdmin,
-    allowFindTodoForAnybody,
+    allow(findTodo),
     allowCompleteTodoForSelf,
-    allowDeleteTodoForAll,
+    allow(deleteTodo),
 ];
 
 export const authorization: Authorization = {

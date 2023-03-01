@@ -7,7 +7,7 @@ import { AnyUser } from ".";
  * @param user The user that is trying to execute the operation.
  * @param data The input/output of the operation.
  */
-export interface Context<I> {
+export interface Context<D> {
     currentUser: AnyUser;
-    data: I;
+    data: D;
 }

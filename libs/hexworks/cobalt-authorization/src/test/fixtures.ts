@@ -1,5 +1,4 @@
 import * as O from "fp-ts/Option";
-import { User } from "../User";
 import { roles } from "./roles";
 import { Todo } from "./Todo";
 
@@ -7,25 +6,25 @@ type TodoMap = {
     [key: number]: Todo;
 };
 
-export const anonUser: User<number> = {
+export const anonUser = {
     id: 1,
     name: "anonymous",
     roles: [roles.anonymous],
 };
 
-export const userJohn: User<number> = {
+export const userJohn = {
     id: 2,
     name: "John Doe",
     roles: [roles.user],
 };
 
-export const userJane: User<number> = {
+export const userJane = {
     id: 3,
     name: "Jane Doe",
     roles: [roles.user],
 };
 
-export const adminBob: User<number> = {
+export const adminBob = {
     id: 4,
     name: "Bob Doe",
     roles: [roles.admin],

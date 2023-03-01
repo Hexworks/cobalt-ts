@@ -9,6 +9,6 @@ import { OperationResult } from "./Operation";
  * If the operation is allowed it will return the context.
  * If not, it will return the appropriate error.
  */
-export type Policy<I> = (
+export type Policy<I, D> = (
     context: Context<I>
-) => OperationResult<ProgramError, Context<I>>;
+) => OperationResult<ProgramError, Context<I>, D>;

@@ -9,6 +9,7 @@ import {
     Filter,
     getPermissionFilterFor,
     Operation,
+    OperationDependencies,
     OperationResult,
     Policy,
     Role,
@@ -28,15 +29,18 @@ export interface Authorization {
  * This brand makes sure that {@link AuthorizedOperation}s can only be created
  * by `authorize`.
  */
-export interface AuthorizedOperationBrand {
+export type AuthorizedOperationBrand = {
     readonly _: unique symbol;
-}
+};
 
+/**
+ * A {@link TaskResult} that contains a {@link Context} object (of type `T`).
+ */
 export type ContextTaskResult<T> = TaskResult<ProgramError, Context<T>>;
 
-export type ContextOperationResult<T, D = unknown> = OperationResult<
+export type ContextOperationResult<O, D> = OperationResult<
     ProgramError,
-    Context<T>,
+    Context<O>,
     D
 >;
 
@@ -59,22 +63,24 @@ export type ContextOperationResult<T, D = unknown> = OperationResult<
  * )
  * ```
  */
-export type AuthorizedOperation<I, O, D = unknown> = (
-    input: ContextOperationResult<I>
+export type AuthorizedOperation<I, O, D> = (
+    input: ContextOperationResult<I, D>
 ) => ContextOperationResult<O, D> & AuthorizedOperationBrand;
 
 /**
  * Takes an {@link Operation} and augments it with the given `authorization` information.
  * After an `Operation` is authorized it is safe to call it with any {@link Context} object.
  */
-export const authorize = <I, O, D = unknown>(
-    operation: Operation<I, O, D>,
-    authorization: Authorization
+export const authorize = <I, O, D extends OperationDependencies>(
+    operation: Operation<I, O, D>
 ): AuthorizedOperation<I, O, D> => {
-    return ((input: ContextOperationResult<I>) => {
+    return ((input: ContextOperationResult<I, D>) => {
         return pipe(
-            input,
-            RTE.chainW((context: Context<I>) => {
+            RTE.Do,
+            RTE.bind("context", () => input),
+            RTE.bindW("deps", () => RTE.ask<D>()),
+            RTE.chainW(({ context, deps }) => {
+                const { authorization } = deps;
                 const { currentUser: user } = context;
                 const roles = authorization.roles;
 
@@ -115,19 +121,19 @@ export const authorize = <I, O, D = unknown>(
     }) as AuthorizedOperation<I, O, D>;
 };
 
-const evaluatePolicies = <I>(context: Context<I>) =>
-    A.reduce<Policy<I>, OperationResult<ProgramError, Context<I>>>(
+const evaluatePolicies = <I, D>(context: Context<I>) =>
+    A.reduce<Policy<I, D>, OperationResult<ProgramError, Context<I>, D>>(
         RTE.right(context),
         (acc, policy) => pipe(acc, RTE.chain(policy))
     );
 
-const executeOperation = <I, O, D>(
+const executeOperation = <I, O, D extends OperationDependencies>(
     operation: Operation<I, O, D>,
     user: AnyUser
 ) =>
     RTE.chain((context: Context<I>) =>
         pipe(
-            operation.execute(context.data),
+            operation(context.data),
             RTE.map((output: O) => {
                 return {
                     currentUser: user,
@@ -138,7 +144,7 @@ const executeOperation = <I, O, D>(
     );
 
 const applyFilters = <O, D>(
-    filters: Filter<O>[],
+    filters: Filter<O, D>[],
     result: ContextOperationResult<O, D>
 ) =>
     pipe(
