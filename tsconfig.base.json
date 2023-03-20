@@ -32,6 +32,9 @@
             ],
             "@hexworks/cobalt-core": ["libs/hexworks/cobalt-core/src/index.ts"],
             "@hexworks/cobalt-data": ["libs/hexworks/cobalt-data/src/index.ts"],
+            "@hexworks/cobalt-events": [
+                "libs/hexworks/cobalt-events/src/index.ts"
+            ],
             "@hexworks/cobalt-graphql": [
                 "libs/hexworks/cobalt-graphql/src/index.ts"
             ],
