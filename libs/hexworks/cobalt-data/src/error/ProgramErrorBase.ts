@@ -19,10 +19,11 @@ export abstract class ProgramErrorBase<T extends string>
     extends Error
     implements ProgramError
 {
+    public override message: string;
+    public override cause: ProgramError | undefined;
+
     public __tag: T;
-    public message: string;
     public details: Record<string, unknown>;
-    public cause: ProgramError | undefined;
 
     constructor(params: {
         __tag: T;

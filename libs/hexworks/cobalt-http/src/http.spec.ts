@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 import { fail } from "@hexworks/cobalt-core";
-import { CodecValidationError } from "@hexworks/cobalt-data";
+import { ZodValidationError } from "@hexworks/cobalt-data";
 import { isLeft, isRight } from "fp-ts/Either";
 import * as z from "zod";
 import { HTTPRequestError } from "./errors";
@@ -98,7 +98,7 @@ describe("Given a default Http Client", () => {
         if (isRight(result)) {
             fail("Should have failed.");
         } else {
-            expect(result.left).toBeInstanceOf(CodecValidationError);
+            expect(result.left).toBeInstanceOf(ZodValidationError);
         }
     });
 

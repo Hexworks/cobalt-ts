@@ -48,9 +48,4 @@ export type Event = {
      * The timestamp (ms) at which this event was emitted.
      */
     emittedAt: number;
-    /**
-     * The timestamp (ms) at which this event was handled.
-     * This will be `null` if the event was not handled yet.
-     */
-    handledAt: number | null;
 };

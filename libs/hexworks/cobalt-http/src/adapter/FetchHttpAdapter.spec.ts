@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { fail } from "@hexworks/cobalt-core";
-import { CodecValidationError } from "@hexworks/cobalt-data";
+import { ZodValidationError } from "@hexworks/cobalt-data";
 import { isLeft, isRight } from "fp-ts/lib/Either";
 import { z } from "zod";
 import { FetchHttpAdapter } from "./FetchHttpAdapter";
@@ -96,7 +96,7 @@ describe("Given a Fetch Http Adapter", () => {
         if (isRight(result)) {
             fail("Should have failed.");
         } else {
-            expect(result.left).toBeInstanceOf(CodecValidationError);
+            expect(result.left).toBeInstanceOf(ZodValidationError);
         }
     });
 
