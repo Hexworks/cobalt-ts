@@ -1,11 +1,6 @@
 import { ZodError, ZodFormattedError } from "zod";
 import { ProgramErrorBase } from "../error";
 
-export type ErrorReport = {
-    errors: string[];
-    [name: string]: string[];
-};
-
 /**
  * Use this error to wrap validation errors into a `ProgramError`.
  */
