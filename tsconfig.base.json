@@ -14,7 +14,7 @@
         "isolatedModules": true,
         "jsx": "react",
         "lib": ["dom", "dom.iterable", "esnext"],
-        "module": "ESNext",
+        "module": "CommonJS",
         "moduleResolution": "node",
         "noFallthroughCasesInSwitch": true,
         "noImplicitReturns": true,
@@ -38,7 +38,10 @@
             "@hexworks/cobalt-graphql": [
                 "libs/hexworks/cobalt-graphql/src/index.ts"
             ],
-            "@hexworks/cobalt-http": ["libs/hexworks/cobalt-http/src/index.ts"]
+            "@hexworks/cobalt-http": ["libs/hexworks/cobalt-http/src/index.ts"],
+            "@hexworks/cobalt-scheduler": [
+                "libs/hexworks/cobalt-scheduler/src/index.ts"
+            ]
         }
     },
     "exclude": ["node_modules", "tmp"]

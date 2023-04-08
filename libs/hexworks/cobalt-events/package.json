@@ -1,5 +1,29 @@
 {
     "name": "@hexworks/cobalt-events",
-    "version": "0.0.1",
-    "type": "commonjs"
+    "version": "2023.5.0-RELEASE",
+    "description": "Event bus implementation for Cobalt.",
+    "homepage": "https://github.com/Hexworks/cobalt-ts",
+    "keywords": [
+        "hexworks",
+        "typescript",
+        "node",
+        "fp"
+    ],
+    "repository": {
+        "type": "git",
+        "url": "git@github.com:Hexworks/cobalt-ts.git"
+    },
+    "author": {
+        "name": "Hexworks"
+    },
+    "contributors": [
+        {
+            "name": "addamsson"
+        }
+    ],
+    "license": "Apache-2.0",
+    "peerDependencies": {
+        "fp-ts": "^2.13.1",
+        "zod": "^3.20.6"
+    }
 }

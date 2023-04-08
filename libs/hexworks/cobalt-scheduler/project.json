@@ -1,24 +1,23 @@
 {
-    "name": "hexworks-cobalt-events",
+    "name": "hexworks-cobalt-scheduler",
     "$schema": "../../../node_modules/nx/schemas/project-schema.json",
-    "sourceRoot": "libs/hexworks/cobalt-events/src",
+    "sourceRoot": "libs/hexworks/cobalt-scheduler/src",
     "projectType": "library",
     "targets": {
         "build": {
             "executor": "@nrwl/esbuild:esbuild",
             "outputs": ["{options.outputPath}"],
             "options": {
-                "outputPath": "dist/libs/hexworks/cobalt-events",
-                "main": "libs/hexworks/cobalt-events/src/index.ts",
-                "tsConfig": "libs/hexworks/cobalt-events/tsconfig.lib.json",
-                "assets": [],
-                "babelUpwardRootMode": true
+                "outputPath": "dist/libs/hexworks/cobalt-scheduler",
+                "main": "libs/hexworks/cobalt-scheduler/src/index.ts",
+                "tsConfig": "libs/hexworks/cobalt-scheduler/tsconfig.lib.json",
+                "assets": ["libs/hexworks/cobalt-scheduler/*.md"]
             }
         },
         "publish": {
             "executor": "nx:run-commands",
             "options": {
-                "command": "node tools/scripts/publish.mjs hexworks-cobalt-events {args.ver} {args.tag}"
+                "command": "node tools/scripts/publish.mjs hexworks-cobalt-scheduler {args.ver} {args.tag}"
             },
             "dependsOn": ["build"]
         },
@@ -26,14 +25,14 @@
             "executor": "@nrwl/linter:eslint",
             "outputs": ["{options.outputFile}"],
             "options": {
-                "lintFilePatterns": ["libs/hexworks/cobalt-events/**/*.ts"]
+                "lintFilePatterns": ["libs/hexworks/cobalt-scheduler/**/*.ts"]
             }
         },
         "test": {
             "executor": "@nrwl/jest:jest",
             "outputs": ["{workspaceRoot}/coverage/{projectRoot}"],
             "options": {
-                "jestConfig": "libs/hexworks/cobalt-events/jest.config.ts",
+                "jestConfig": "libs/hexworks/cobalt-scheduler/jest.config.ts",
                 "passWithNoTests": true
             },
             "configurations": {

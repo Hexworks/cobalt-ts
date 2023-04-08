@@ -5,7 +5,7 @@
     "projectType": "library",
     "targets": {
         "build": {
-            "executor": "@nrwl/js:tsc",
+            "executor": "@nrwl/esbuild:esbuild",
             "outputs": ["{options.outputPath}"],
             "options": {
                 "outputPath": "dist/libs/hexworks/cobalt-graphql",
@@ -13,6 +13,13 @@
                 "tsConfig": "libs/hexworks/cobalt-graphql/tsconfig.lib.json",
                 "assets": ["libs/hexworks/cobalt-graphql/*.md"]
             }
+        },
+        "publish": {
+            "executor": "nx:run-commands",
+            "options": {
+                "command": "node tools/scripts/publish.mjs hexworks-cobalt-graphql {args.ver} {args.tag}"
+            },
+            "dependsOn": ["build"]
         },
         "lint": {
             "executor": "@nrwl/linter:eslint",

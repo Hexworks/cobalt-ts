@@ -9,7 +9,7 @@ export class ZodValidationError<
 > extends ProgramErrorBase<"ZodValidationError"> {
     public errorReport: ZodFormattedError<T>;
 
-    constructor(public error: ZodError<unknown>) {
+    constructor(public error: ZodError<T>) {
         super({
             __tag: "ZodValidationError",
             message: error.message,
