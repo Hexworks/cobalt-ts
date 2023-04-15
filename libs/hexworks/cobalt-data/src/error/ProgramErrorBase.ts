@@ -1,3 +1,4 @@
+import { JsonObject } from "type-fest";
 import { ProgramError } from "./ProgramError";
 
 /**
@@ -23,12 +24,12 @@ export abstract class ProgramErrorBase<T extends string>
     public override cause: ProgramError | undefined;
 
     public __tag: T;
-    public details: Record<string, unknown>;
+    public details: JsonObject;
 
     constructor(params: {
         __tag: T;
         message: string;
-        details?: Record<string, unknown>;
+        details?: JsonObject;
         cause?: ProgramError;
     }) {
         super(params.message);

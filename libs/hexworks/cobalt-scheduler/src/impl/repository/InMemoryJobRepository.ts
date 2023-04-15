@@ -3,67 +3,78 @@
 import * as T from "fp-ts/Task";
 import * as TE from "fp-ts/TaskEither";
 import { JsonObject } from "type-fest";
-import { JobNotFoundError } from "../../error";
-import { JobRepository, PersistedJob } from "../../JobRepository";
+import {
+    Job,
+    JobNotFoundError,
+    JobRepository,
+    JobState,
+    JobToSave,
+} from "../../";
 
+/**
+ * Reference implementation of a {@link JobRepository} that stores all jobs in memory.
+ */
 export const InMemoryJobRepository = (): JobRepository => {
-    const jobs = new Map<string, PersistedJob<JsonObject>>();
-
+    const jobs = new Map<string, Job<JsonObject>>();
     return {
         findByName: (name: string) => {
-            if (jobs.has(name)) {
-                return TE.right(jobs.get(name)!);
+            const job = jobs.get(name);
+            if (job) {
+                return TE.right(job);
             } else {
                 return TE.left(new JobNotFoundError(name));
             }
         },
-        upsertJob: (job) => {
+        upsert: <T extends JsonObject>(job: JobToSave<T>) => {
             const {
-                correlationId,
                 data,
-                logData,
+                currentFailCount,
+                previouslyScheduledAt,
+                state,
                 name,
-                note,
+                correlationId,
                 scheduledAt,
-                state,
                 type,
+                log,
             } = job;
-            const log = {
-                note,
-                state,
-                data: logData,
-                createdAt: new Date(),
-            };
-            let toSave = jobs.get(job.name);
-            if (toSave) {
-                toSave.correlationId = correlationId;
-                toSave.data = data;
-                toSave.scheduledAt = scheduledAt;
-                toSave.state = state;
-                toSave.updatedAt = new Date();
-                toSave.log.push(log);
+            const existing = jobs.get(job.name);
+            if (existing) {
+                existing.data = data;
+                existing.state = state;
+                if (currentFailCount) {
+                    existing.currentFailCount = currentFailCount;
+                }
+                existing.previouslyScheduledAt = previouslyScheduledAt;
+                if (log) {
+                    existing.log.push({
+                        ...log,
+                        state,
+                        createdAt: new Date(),
+                    });
+                }
             } else {
-                toSave = {
-                    name,
-                    type,
-                    correlationId,
+                jobs.set(name, {
                     data,
-                    scheduledAt,
                     state,
-                    currentFailCount: 0,
-                    createdAt: new Date(),
+                    correlationId,
+                    name,
+                    scheduledAt,
+                    type,
                     updatedAt: new Date(),
-                    log: [log],
-                };
+                    createdAt: new Date(),
+                    currentFailCount: 0,
+                    log: log ? [{ ...log, state, createdAt: new Date() }] : [],
+                });
             }
-            jobs.set(name, toSave);
-            return TE.right(toSave as any);
+            return TE.right(jobs.get(name)! as Job<T>);
         },
-        loadNextJobs: () => {
+        findNextJobs: () => {
             return T.of(
-                Array.from(jobs.values()).filter((job) => {
-                    job.scheduledAt < new Date();
-                })
+                Array.from(jobs.values()).filter(
+                    (job) =>
+                        job.scheduledAt < new Date() &&
+                        job.state === JobState.SCHEDULED
+                )
             );
         },
     };

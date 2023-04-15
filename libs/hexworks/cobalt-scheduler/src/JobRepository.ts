@@ -1,20 +1,35 @@
 import * as T from "fp-ts/Task";
 import * as TE from "fp-ts/TaskEither";
-import { JsonObject } from "type-fest";
-import { JobCreationError } from "./error";
-import { Job } from "./job";
+import { JsonObject, JsonValue } from "type-fest";
+import { JobStorageError, JobNotFoundError } from "./error";
+import { Job, JobDescriptor, JobState } from "./job";
 
-export type UnsavedJob<T extends JsonObject> = Omit<
-    Job<T>,
-    "log" | "createdAt" | "updatedAt"
-> & {
+export type UnsavedLog = {
     note: string;
-    logData: JsonObject;
+    type?: string;
+    data?: JsonObject;
 };
 
-export type PersistedJob<T extends JsonObject> = Job<T> & {
-    currentFailCount: number;
+export type JobToSave<T extends JsonObject> = JobDescriptor<T> & {
+    /**
+     * A unique identifier that can be used to find jobs that were caused
+     * by each other. This will be filled in by the scheduler.
+     */
+    correlationId: string;
+    /**
+     * The current state of the job.
+     */
+    state: JobState;
+    /**
+     * The number of times this job has failed in a row.
+     */
+    currentFailCount?: number;
+    /**
+     * The time when this job was last scheduled (if it was ever scheduled).
+     * This is useful for performing exponential backoff.
+     */
     previouslyScheduledAt?: Date;
+    log?: UnsavedLog;
 };
 
 /**
@@ -24,12 +39,19 @@ export type JobRepository = {
     /**
      * Tries to find a job by its unique name.
      */
-    findByName: (name: string) => TE.TaskEither<Error, Job<JsonObject>>;
+    findByName: (
+        name: string
+    ) => TE.TaskEither<JobNotFoundError, Job<JsonObject>>;
     /**
-     * Upserts the given job.
+     * Returns the next jobs that should be executed (eg: where scheduledAt <= now).
+     * **Note that** this function also filters for job states that are in the
+     * {@link JobState.SCHEDULED} state.
      */
-    upsertJob: <T extends JsonObject>(
-        job: UnsavedJob<T>
-    ) => TE.TaskEither<JobCreationError, Job<T>>;
-    loadNextJobs: () => T.Task<PersistedJob<JsonObject>[]>;
+    findNextJobs: () => T.Task<Job<JsonObject>[]>;
+    /**
+     * Creates or updates the given job.
+     */
+    upsert: <T extends JsonObject>(
+        job: JobToSave<T>
+    ) => TE.TaskEither<JobStorageError, Job<T>>;
 };

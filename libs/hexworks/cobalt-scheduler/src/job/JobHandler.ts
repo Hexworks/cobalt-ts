@@ -1,29 +1,51 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import { ProgramError } from "@hexworks/cobalt-data";
 import * as TE from "fp-ts/TaskEither";
 import { JsonObject } from "type-fest";
-import { Schema } from "zod";
-import { RetryStrategy } from "../RetryStrategy";
+import { JobExecutionError } from "../error";
+import { JobContext, JobContextWithResult } from "./JobContext";
 import { JobDescriptor } from "./JobDescriptor";
 import { JobResult } from "./JobResult";
 
+export type AnyJobHandler = JobHandler<any>;
+
+export type AnyExecutionResult = TE.TaskEither<
+    JobContextWithResult<JsonObject, ProgramError>,
+    JobContextWithResult<JsonObject, JobResult>
+>;
+
 /**
- * A job handler is responsible for executing a task of a given `type`.
+ * A job handler is responsible for handling the lifecycle of a Job:
+ * - execution
+ * - retry
+ * - error handling
+ * - result handling
  */
-export type JobHandler<T extends JsonObject> = {
+export interface JobHandler<T extends JsonObject> {
+    /**
+     * The type of job this handler can handle.
+     */
     type: string;
     /**
-     * The schema that is used to validate the input data for the task.
+     * Tells whether this handler can execute the given {@link JobDescriptor}.
      */
-    inputSchema: Schema<T>;
-    /**
-     * The retry strategy to be used in case the job fails.
-     * By default {@link NoRetryStrategy} will be used.
-     */
-    retryStrategy: RetryStrategy<T>;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     canExecute: (info: JobDescriptor<any>) => info is JobDescriptor<T>;
     /**
      * Executes the task with the given {@link JobDescriptor}.
      */
-    execute: (info: JobDescriptor<T>) => TE.TaskEither<ProgramError, JobResult>;
-};
+    execute: (
+        context: JobContext<T>
+    ) => TE.TaskEither<
+        JobExecutionError<T>,
+        JobContextWithResult<T, JobResult>
+    >;
+
+    onResult: (
+        result: JobContextWithResult<T, JobResult>
+    ) => TE.TaskEither<ProgramError, void>;
+
+    onError: (
+        error: JobExecutionError<T>
+    ) => TE.TaskEither<JobExecutionError<T>, void>;
+}

@@ -1,21 +1,29 @@
-import { ZodValidationError } from "@hexworks/cobalt-data";
-import { pipe } from "fp-ts/lib/function";
-import * as R from "fp-ts/Reader";
+import { createLogger } from "@hexworks/cobalt-core";
+import {
+    ProgramError,
+    ZodValidationError,
+    toJson,
+} from "@hexworks/cobalt-data";
 import * as TE from "fp-ts/TaskEither";
+import { pipe } from "fp-ts/lib/function";
 import { Map } from "immutable";
 import { Duration } from "luxon";
 import { JsonObject } from "type-fest";
+import { JobRepository, UnsavedLog } from "./JobRepository";
+import { Timer } from "./Timer";
 import {
-    JobCreationError,
+    JobAlreadyExistsError,
+    JobStorageError,
+    NoHandlerFoundError,
     SchedulerNotRunningError,
     SchedulerStartupError,
 } from "./error";
-import { Job, JobDescriptor, JobHandler } from "./job";
-import { JobRepository } from "./JobRepository";
+import { AnyJob, Job, JobDescriptor, JobHandler, JobState } from "./job";
 
 export type SchedulingError<T extends JsonObject> =
     | SchedulerNotRunningError
-    | JobCreationError
+    | JobStorageError
+    | JobAlreadyExistsError
     | ZodValidationError<T>;
 
 export const DEFAULT_JOB_CHECK_INTERVAL = Duration.fromObject({
@@ -34,7 +42,7 @@ export type Scheduler = {
      * Schedules a new Task to be executed at a later time.
      */
     schedule: <T extends JsonObject>(
-        task: JobDescriptor<T>
+        job: JobDescriptor<T>
     ) => TE.TaskEither<SchedulingError<T>, Job<T>>;
     /**
      * Stops this scheduler. It can't be used after this.
@@ -45,39 +53,183 @@ export type Scheduler = {
 type Deps = {
     jobRepository: JobRepository;
     handlers: Map<string, JobHandler<JsonObject>>;
+    timer: Timer;
+    generateId: () => string;
     jobCheckInterval?: Duration;
 };
+
+const logger = createLogger("Scheduler");
 
 export const Scheduler = ({
     jobRepository,
     handlers,
+    timer,
+    generateId,
     jobCheckInterval = DEFAULT_JOB_CHECK_INTERVAL,
 }: Deps): Scheduler => {
-    let timer: ReturnType<typeof setInterval> | undefined = undefined;
+    let state: "stopped" | "running" | "uninitialized" = "uninitialized";
 
-    {
-        return {
-            start: () => {
-                if (!timer) {
-                    timer = setInterval(() => {
-                        // TODO: Implement
-                    }, jobCheckInterval.milliseconds);
+    const start = () => {
+        if (state === "uninitialized") {
+            state = "running";
+            executeNextJobs();
+        }
+        return TE.right(undefined);
+    };
+
+    const schedule = <T extends JsonObject>(
+        job: JobDescriptor<T>
+    ): TE.TaskEither<SchedulingError<T>, Job<T>> => {
+        if (state !== "running") {
+            return TE.left(new SchedulerNotRunningError());
+        } else {
+            return jobRepository.upsert({
+                ...job,
+                correlationId: job.correlationId ?? generateId(),
+                state: JobState.SCHEDULED,
+                currentFailCount: 0,
+            });
+        }
+    };
+
+    const stop = () => {
+        state = "stopped";
+        timer.cancel();
+        return TE.right(undefined);
+    };
+
+    const scheduler = { schedule };
+
+    const failJob = <E extends ProgramError>({
+        job,
+        log,
+        error,
+    }: {
+        job: AnyJob;
+        log: UnsavedLog;
+        error: E;
+    }): TE.TaskEither<ProgramError, void> => {
+        const { type, name, data, scheduledAt, correlationId } = job;
+        return pipe(
+            jobRepository.upsert({
+                name,
+                type,
+                data,
+                scheduledAt,
+                correlationId,
+                state: JobState.FAILED,
+                log,
+            }),
+            TE.chainW(() => TE.left(error))
+        );
+    };
+
+    const completeJob = (job: AnyJob): TE.TaskEither<ProgramError, void> => {
+        let note = `Job ${job.name} completed successfully.`;
+        if (job.currentFailCount > 0) {
+            note = `${note} Clearing fail count.`;
+        }
+        const { type, name, data, scheduledAt, correlationId } = job;
+        return pipe(
+            jobRepository.upsert({
+                name,
+                type,
+                data,
+                scheduledAt,
+                correlationId,
+                state: JobState.COMPLETED,
+                currentFailCount: 0,
+                log: {
+                    note,
+                },
+            }),
+            TE.map(() => undefined)
+        );
+    };
+
+    const executeJob = (job: AnyJob): TE.TaskEither<ProgramError, void> => {
+        return pipe(
+            TE.Do,
+            TE.bind("job", () =>
+                jobRepository.upsert({
+                    ...job,
+                    state: JobState.RUNNING,
+                    log: {
+                        note: "Starting job...",
+                    },
+                })
+            ),
+            TE.bindW("handler", () => {
+                const { type } = job;
+                const handler = handlers.get(type);
+                if (handler && handler.canExecute(job)) {
+                    return TE.right(handler);
+                } else {
+                    return TE.left(new NoHandlerFoundError(type));
                 }
-                return TE.right(undefined);
-            },
-            schedule: () => {
-                if (!timer) {
-                    return TE.left(new SchedulerNotRunningError());
+            }),
+            TE.bindW("result", ({ handler }) => {
+                logger.info(`Executing job ${job.name}.`);
+                return handler.execute({
+                    job,
+                    scheduler,
+                });
+            }),
+            TE.fold(
+                (error): TE.TaskEither<ProgramError, void> => {
+                    switch (error.__tag) {
+                        case "JobExecutionError":
+                            return error.handler.onError(error);
+                        default:
+                            return TE.left(error);
+                    }
+                },
+                ({ handler, result }) => {
+                    return handler.onResult(result);
                 }
-                throw new Error("Not implemented");
-            },
-            stop: () => {
-                if (timer) {
-                    clearInterval(timer);
-                    timer = undefined;
+            ),
+            TE.foldW(
+                (error) => {
+                    return failJob({
+                        job,
+                        log: {
+                            note: `Job execution failed. Cause: ${error.message}`,
+                            type: error.__tag,
+                            data: toJson(error),
+                        },
+                        error,
+                    });
+                },
+                () => {
+                    return completeJob(job);
                 }
-                return TE.right(undefined);
-            },
-        };
-    }
+            )
+        );
+    };
+
+    const executeNextJobs = async (): Promise<void> => {
+        if (state !== "running") {
+            return Promise.resolve();
+        }
+        logger.info("Executing next batch of jobs...");
+        const startedAt = Date.now();
+        const jobs = await jobRepository.findNextJobs()();
+        await Promise.allSettled(jobs.map((job) => executeJob(job)()));
+        // TODO: reporting
+        const end = Date.now();
+        const passed = end - startedAt;
+        if (passed > jobCheckInterval.milliseconds) {
+            logger.warn(
+                `Job execution took longer (${passed}ms) than the check interval (${jobCheckInterval.milliseconds}ms).`
+            );
+        }
+        logger.info(`Executed jobs in ${passed}ms.`);
+        timer.setTimeout(executeNextJobs, jobCheckInterval.milliseconds);
+    };
+
+    return {
+        start,
+        schedule,
+        stop,
+    };
 };

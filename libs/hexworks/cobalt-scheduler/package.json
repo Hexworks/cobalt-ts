@@ -26,6 +26,7 @@
         "fp-ts": "^2.13.1",
         "immutable": "^4.3.0",
         "luxon": "^3.3.0",
-        "type-fest": "^3.6.0"
+        "type-fest": "^3.6.0",
+        "@paralleldrive/cuid2": "^2.2.0"
     }
 }

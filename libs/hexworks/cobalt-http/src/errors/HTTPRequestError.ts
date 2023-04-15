@@ -11,7 +11,7 @@ export class HTTPRequestError extends ProgramErrorBase<"HTTPRequestError"> {
             message: error.message,
             details: {
                 name: error.name,
-                stack: error.stack,
+                stack: error.stack ?? null,
             },
         });
         this.error = error;

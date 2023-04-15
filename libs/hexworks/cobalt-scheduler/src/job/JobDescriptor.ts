@@ -11,6 +11,11 @@ export type JobDescriptor<T extends JsonObject> = {
      */
     name: string;
     /**
+     * A unique identifier that can be used to find jobs that were caused
+     * by each other. This will be filled in by the scheduler.
+     */
+    correlationId?: string;
+    /**
      * The type of the job. This is used to find the appropriate handler
      * for the given job when it needs to be executed.
      */

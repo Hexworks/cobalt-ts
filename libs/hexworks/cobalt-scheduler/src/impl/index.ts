@@ -1,2 +1,2 @@
 export * from "./repository";
-export * from "./retrystrategy";
+export * from "./JobHandlerBase";

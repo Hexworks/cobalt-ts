@@ -14,6 +14,10 @@ export type JobLog = {
      */
     state: JobState;
     /**
+     * The type of the data that is saved to this log entry.
+     */
+    type?: string;
+    /**
      * Additional (optional) freeform information.
      */
     data?: JsonObject;
