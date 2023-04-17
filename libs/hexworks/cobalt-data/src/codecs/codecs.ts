@@ -1,12 +1,14 @@
+import { JsonObject, JsonValue } from "type-fest";
 import * as z from "zod";
 import { ProgramError } from "../error";
 
-const literalSchema = z.union([z.string(), z.number(), z.boolean(), z.null()]);
-type Literal = z.infer<typeof literalSchema>;
-type Json = Literal | { [key: string]: Json } | Json[];
-const JsonValue: z.ZodType<Json> = z.lazy(() =>
-    z.union([literalSchema, z.array(JsonValue), z.record(JsonValue)])
+const JsonPrimitive = z.union([z.string(), z.number(), z.boolean(), z.null()]);
+const JsonValue: z.ZodType<JsonValue> = z.lazy(() =>
+    z.union([JsonPrimitive, z.array(JsonValue), z.record(JsonValue)])
 );
+const JsonObject: z.ZodType<JsonObject> = z
+    .record(z.string(), JsonValue)
+    .and(z.record(z.string(), JsonValue.or(z.undefined())));
 
 /**
  * This codec can be used to validate {@link ProgramError}s.
@@ -14,6 +16,6 @@ const JsonValue: z.ZodType<Json> = z.lazy(() =>
 export const programErrorCodec: z.ZodType<ProgramError> = z.object({
     __tag: z.string(),
     message: z.string(),
-    details: JsonValue,
+    details: JsonObject,
     cause: z.lazy(() => programErrorCodec.optional()),
 });

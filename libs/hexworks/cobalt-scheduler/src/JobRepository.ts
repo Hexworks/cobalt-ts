@@ -2,7 +2,7 @@ import * as T from "fp-ts/Task";
 import * as TE from "fp-ts/TaskEither";
 import { JsonObject, JsonValue } from "type-fest";
 import { JobStorageError, JobNotFoundError } from "./error";
-import { Job, JobDescriptor, JobState } from "./job";
+import { AnyJob, Job, JobDescriptor, JobState } from "./job";
 
 export type UnsavedLog = {
     note: string;
@@ -47,7 +47,7 @@ export type JobRepository = {
      * **Note that** this function also filters for job states that are in the
      * {@link JobState.SCHEDULED} state.
      */
-    findNextJobs: () => T.Task<Job<JsonObject>[]>;
+    findNextJobs: () => T.Task<AnyJob[]>;
     /**
      * Creates or updates the given job.
      */

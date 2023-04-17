@@ -1,4 +1,4 @@
-import { JsonObject, JsonValue } from "type-fest";
+import { JsonObject } from "type-fest";
 
 /**
  * Common type for program errors. Uses `__tag` to
@@ -7,7 +7,7 @@ import { JsonObject, JsonValue } from "type-fest";
 export type ProgramError = {
     __tag: string;
     message: string;
-    details: JsonValue;
+    details: JsonObject;
     cause?: ProgramError;
 };
 

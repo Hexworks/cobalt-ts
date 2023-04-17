@@ -31,3 +31,6 @@ export type JobDescriptor<T extends JsonObject> = {
      */
     scheduledAt: Date;
 };
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type AnyJobDescriptor = JobDescriptor<any>;

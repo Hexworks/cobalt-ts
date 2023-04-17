@@ -4,15 +4,15 @@ import { ProgramError } from "@hexworks/cobalt-data";
 import * as TE from "fp-ts/TaskEither";
 import { JsonObject } from "type-fest";
 import { JobExecutionError } from "../error";
-import { JobContext, JobContextWithResult } from "./JobContext";
+import { JobContext, JobExecutionResult } from "./JobContext";
 import { JobDescriptor } from "./JobDescriptor";
 import { JobResult } from "./JobResult";
 
 export type AnyJobHandler = JobHandler<any>;
 
 export type AnyExecutionResult = TE.TaskEither<
-    JobContextWithResult<JsonObject, ProgramError>,
-    JobContextWithResult<JsonObject, JobResult>
+    JobExecutionResult<JsonObject, ProgramError>,
+    JobExecutionResult<JsonObject, JobResult>
 >;
 
 /**
@@ -34,15 +34,10 @@ export interface JobHandler<T extends JsonObject> {
     /**
      * Executes the task with the given {@link JobDescriptor}.
      */
-    execute: (
-        context: JobContext<T>
-    ) => TE.TaskEither<
-        JobExecutionError<T>,
-        JobContextWithResult<T, JobResult>
-    >;
+    execute: (context: JobContext<T>) => TE.TaskEither<ProgramError, JobResult>;
 
     onResult: (
-        result: JobContextWithResult<T, JobResult>
+        result: JobExecutionResult<T, JobResult>
     ) => TE.TaskEither<ProgramError, void>;
 
     onError: (

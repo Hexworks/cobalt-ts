@@ -1,29 +1,39 @@
 import { createLogger } from "@hexworks/cobalt-core";
 import {
     ProgramError,
+    UnknownError,
     ZodValidationError,
     toJson,
 } from "@hexworks/cobalt-data";
 import * as TE from "fp-ts/TaskEither";
 import { pipe } from "fp-ts/lib/function";
-import { Map } from "immutable";
 import { Duration } from "luxon";
 import { JsonObject } from "type-fest";
 import { JobRepository, UnsavedLog } from "./JobRepository";
 import { Timer } from "./Timer";
 import {
     JobAlreadyExistsError,
+    JobExecutionError,
     JobStorageError,
     NoHandlerFoundError,
     SchedulerNotRunningError,
     SchedulerStartupError,
 } from "./error";
-import { AnyJob, Job, JobDescriptor, JobHandler, JobState } from "./job";
+import {
+    AnyJob,
+    AnyJobDescriptor,
+    AnyJobHandler,
+    Job,
+    JobDescriptor,
+    JobHandler,
+    JobState,
+} from "./job";
 
 export type SchedulingError<T extends JsonObject> =
     | SchedulerNotRunningError
     | JobStorageError
     | JobAlreadyExistsError
+    | NoHandlerFoundError
     | ZodValidationError<T>;
 
 export const DEFAULT_JOB_CHECK_INTERVAL = Duration.fromObject({
@@ -47,14 +57,18 @@ export type Scheduler = {
     /**
      * Stops this scheduler. It can't be used after this.
      */
-    stop: () => void;
+    stop: () => TE.TaskEither<ProgramError, void>;
+};
+
+export type IdProvider = {
+    generateId: () => string;
 };
 
 type Deps = {
     jobRepository: JobRepository;
     handlers: Map<string, JobHandler<JsonObject>>;
     timer: Timer;
-    generateId: () => string;
+    idProvider: IdProvider;
     jobCheckInterval?: Duration;
 };
 
@@ -64,17 +78,28 @@ export const Scheduler = ({
     jobRepository,
     handlers,
     timer,
-    generateId,
+    idProvider,
     jobCheckInterval = DEFAULT_JOB_CHECK_INTERVAL,
 }: Deps): Scheduler => {
     let state: "stopped" | "running" | "uninitialized" = "uninitialized";
 
     const start = () => {
-        if (state === "uninitialized") {
-            state = "running";
-            executeNextJobs();
+        switch (state) {
+            case "stopped":
+                return TE.left(
+                    new SchedulerStartupError("Scheduler is stopped.")
+                );
+            case "running":
+                return TE.left(
+                    new SchedulerStartupError("Scheduler is already running.")
+                );
+            case "uninitialized":
+                state = "running";
+                return pipe(
+                    executeNextJobs(),
+                    TE.mapLeft((e) => new SchedulerStartupError(e))
+                );
         }
-        return TE.right(undefined);
     };
 
     const schedule = <T extends JsonObject>(
@@ -83,12 +108,18 @@ export const Scheduler = ({
         if (state !== "running") {
             return TE.left(new SchedulerNotRunningError());
         } else {
-            return jobRepository.upsert({
-                ...job,
-                correlationId: job.correlationId ?? generateId(),
-                state: JobState.SCHEDULED,
-                currentFailCount: 0,
-            });
+            return pipe(
+                findHandler(job),
+                TE.chainW(() => {
+                    return jobRepository.upsert({
+                        ...job,
+                        correlationId:
+                            job.correlationId ?? idProvider.generateId(),
+                        state: JobState.SCHEDULED,
+                        currentFailCount: 0,
+                    });
+                })
+            );
         }
     };
 
@@ -97,8 +128,6 @@ export const Scheduler = ({
         timer.cancel();
         return TE.right(undefined);
     };
-
-    const scheduler = { schedule };
 
     const failJob = <E extends ProgramError>({
         job,
@@ -109,14 +138,9 @@ export const Scheduler = ({
         log: UnsavedLog;
         error: E;
     }): TE.TaskEither<ProgramError, void> => {
-        const { type, name, data, scheduledAt, correlationId } = job;
         return pipe(
             jobRepository.upsert({
-                name,
-                type,
-                data,
-                scheduledAt,
-                correlationId,
+                ...job,
                 state: JobState.FAILED,
                 log,
             }),
@@ -129,14 +153,9 @@ export const Scheduler = ({
         if (job.currentFailCount > 0) {
             note = `${note} Clearing fail count.`;
         }
-        const { type, name, data, scheduledAt, correlationId } = job;
         return pipe(
             jobRepository.upsert({
-                name,
-                type,
-                data,
-                scheduledAt,
-                correlationId,
+                ...job,
                 state: JobState.COMPLETED,
                 currentFailCount: 0,
                 log: {
@@ -147,7 +166,22 @@ export const Scheduler = ({
         );
     };
 
+    const findHandler = (
+        job: AnyJobDescriptor
+    ): TE.TaskEither<NoHandlerFoundError, AnyJobHandler> => {
+        const { type } = job;
+        const handler = handlers.get(type);
+        if (handler && handler.canExecute(job)) {
+            return TE.right(handler);
+        } else {
+            logger.warn(`No handler found for job type ${type}.`);
+            return TE.left(new NoHandlerFoundError(type));
+        }
+    };
+
     const executeJob = (job: AnyJob): TE.TaskEither<ProgramError, void> => {
+        const scheduler = { schedule };
+
         return pipe(
             TE.Do,
             TE.bind("job", () =>
@@ -159,21 +193,20 @@ export const Scheduler = ({
                     },
                 })
             ),
-            TE.bindW("handler", () => {
-                const { type } = job;
-                const handler = handlers.get(type);
-                if (handler && handler.canExecute(job)) {
-                    return TE.right(handler);
-                } else {
-                    return TE.left(new NoHandlerFoundError(type));
-                }
-            }),
+            TE.bindW("handler", () => findHandler(job)),
             TE.bindW("result", ({ handler }) => {
                 logger.info(`Executing job ${job.name}.`);
-                return handler.execute({
+                const context = {
+                    data: job.data,
                     job,
                     scheduler,
-                });
+                };
+                return pipe(
+                    handler.execute(context),
+                    TE.mapLeft(
+                        (e) => new JobExecutionError(context, handler, e)
+                    )
+                );
             }),
             TE.fold(
                 (error): TE.TaskEither<ProgramError, void> => {
@@ -184,11 +217,16 @@ export const Scheduler = ({
                             return TE.left(error);
                     }
                 },
-                ({ handler, result }) => {
-                    return handler.onResult(result);
+                ({ handler, result, job }) => {
+                    return handler.onResult({
+                        data: job.data,
+                        job,
+                        result,
+                        scheduler,
+                    });
                 }
             ),
-            TE.foldW(
+            TE.fold(
                 (error) => {
                     return failJob({
                         job,
@@ -207,24 +245,40 @@ export const Scheduler = ({
         );
     };
 
-    const executeNextJobs = async (): Promise<void> => {
+    const executeNextJobs = (): TE.TaskEither<ProgramError, void> => {
         if (state !== "running") {
-            return Promise.resolve();
+            return TE.fromTask(() => Promise.resolve());
         }
-        logger.info("Executing next batch of jobs...");
-        const startedAt = Date.now();
-        const jobs = await jobRepository.findNextJobs()();
-        await Promise.allSettled(jobs.map((job) => executeJob(job)()));
-        // TODO: reporting
-        const end = Date.now();
-        const passed = end - startedAt;
-        if (passed > jobCheckInterval.milliseconds) {
-            logger.warn(
-                `Job execution took longer (${passed}ms) than the check interval (${jobCheckInterval.milliseconds}ms).`
-            );
-        }
-        logger.info(`Executed jobs in ${passed}ms.`);
-        timer.setTimeout(executeNextJobs, jobCheckInterval.milliseconds);
+
+        return TE.tryCatch(
+            async () => {
+                logger.info("Executing next batch of jobs...");
+                const startedAt = Date.now();
+                const jobs = await jobRepository.findNextJobs()();
+                await Promise.allSettled(jobs.map((job) => executeJob(job)()));
+                // TODO: reporting
+                const end = Date.now();
+                const passed = end - startedAt;
+                if (passed > jobCheckInterval.milliseconds) {
+                    logger.warn(
+                        `Job execution took longer (${passed}ms) than the check interval (${jobCheckInterval.milliseconds}ms).`
+                    );
+                }
+                logger.info(`Executed jobs in ${passed}ms.`);
+                timer.setTimeout(
+                    executeNextJobs,
+                    jobCheckInterval.milliseconds
+                );
+            },
+            (error) => {
+                logger.error("Failed to execute next jobs.", error);
+                timer.setTimeout(
+                    executeNextJobs,
+                    jobCheckInterval.milliseconds
+                );
+                return new UnknownError(error);
+            }
+        );
     };
 
     return {

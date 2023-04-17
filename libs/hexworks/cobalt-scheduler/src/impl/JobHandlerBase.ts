@@ -7,8 +7,8 @@ import { Schema } from "zod";
 import { JobExecutionError } from "../error";
 import {
     JobContext,
-    JobContextWithResult,
     JobDescriptor,
+    JobExecutionResult,
     JobHandler,
     JobResult,
     OnErrorStrategy,
@@ -16,10 +16,12 @@ import {
 } from "../job";
 
 type Params<T extends JsonObject> = {
+    type: string;
     /**
      * The schema that is used to validate the input data for the task.
      */
     inputSchema: Schema<T>;
+    execute(context: JobContext<T>): TE.TaskEither<ProgramError, JobResult>;
     logger?: Logger<unknown>;
     /**
      * Strategies that the handler will choose from to handle the result of the job.
@@ -33,10 +35,13 @@ type Params<T extends JsonObject> = {
     errorStrategies?: OnErrorStrategy<T, ProgramError>[];
 };
 
-export abstract class JobHandlerBase<T extends JsonObject>
-    implements JobHandler<T>
-{
+export class JobHandlerBase<T extends JsonObject> implements JobHandler<T> {
     public inputSchema: Schema<T>;
+    public type: string;
+    public execute: (
+        context: JobContext<T>
+    ) => TE.TaskEither<ProgramError, JobResult>;
+
     protected logger: Logger<unknown>;
     /**
      * Strategies that the handler will choose from to handle the result of the job.
@@ -50,35 +55,34 @@ export abstract class JobHandlerBase<T extends JsonObject>
     private errorStrategies: OnErrorStrategy<T, ProgramError>[];
 
     constructor({
+        type,
         inputSchema,
         logger,
+        execute,
         resultStrategies,
         errorStrategies,
     }: Params<T>) {
+        this.type = type;
+        this.execute = execute;
         this.inputSchema = inputSchema;
         this.logger = logger ?? createLogger("JobHandler");
         this.resultStrategies = resultStrategies ?? [];
         this.errorStrategies = errorStrategies ?? [];
     }
 
-    abstract type: string;
-
-    abstract execute(
-        context: JobContext<T>
-    ): TE.TaskEither<JobExecutionError<T>, JobContextWithResult<T, JobResult>>;
-
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     canExecute(info: JobDescriptor<any>): info is JobDescriptor<T> {
         return this.inputSchema.safeParse(info.data).success;
     }
 
-    onResult({ job, result, scheduler }: JobContextWithResult<T, JobResult>) {
+    onResult({ job, result, scheduler }: JobExecutionResult<T, JobResult>) {
         const strategy = this.resultStrategies.find((s) => s.canHandle(result));
         if (strategy) {
             return strategy.onResult({
                 result,
                 job,
                 scheduler,
+                data: job.data,
             });
         }
         this.logger.warn(
@@ -88,7 +92,7 @@ export abstract class JobHandlerBase<T extends JsonObject>
     }
 
     onError(error: JobExecutionError<T>) {
-        const { job } = error;
+        const job = error.jobContext.job;
         const strategy = this.errorStrategies.find((s) => s.canHandle(error));
         if (strategy) {
             return strategy.onError(error);
@@ -97,3 +101,7 @@ export abstract class JobHandlerBase<T extends JsonObject>
         return TE.right(undefined);
     }
 }
+
+export const createJobHandler = <T extends JsonObject>(params: Params<T>) => {
+    return new JobHandlerBase<T>(params);
+};
