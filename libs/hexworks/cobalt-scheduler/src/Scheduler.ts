@@ -1,4 +1,4 @@
-import { createLogger } from "@hexworks/cobalt-core";
+import { IdProvider, createLogger } from "@hexworks/cobalt-core";
 import {
     ProgramError,
     UnknownError,
@@ -58,10 +58,6 @@ export type Scheduler = {
      * Stops this scheduler. It can't be used after this.
      */
     stop: () => TE.TaskEither<ProgramError, void>;
-};
-
-export type IdProvider = {
-    generateId: () => string;
 };
 
 type Deps = {
