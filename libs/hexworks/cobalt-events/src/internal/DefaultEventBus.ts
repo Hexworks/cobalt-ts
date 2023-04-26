@@ -12,17 +12,20 @@ import {
     SubscriptionDescriptor,
 } from "../api";
 
-const EMPTY_SCOPE = Map<string, List<SubscriptionWithCallback<any>>>();
-const NO_SUBSCRIBERS = List<SubscriptionWithCallback<any>>();
+const EMPTY_SCOPE = Map<string, List<SubscriptionWithCallback<any, any>>>();
+const NO_SUBSCRIBERS = List<SubscriptionWithCallback<any, any>>();
 
-type SubscriptionWithCallback<T extends Event> = Subscription & {
-    fn: (event: T) => T.Task<CallbackResult>;
+type SubscriptionWithCallback<
+    T extends string,
+    E extends Event<T>
+> = Subscription & {
+    fn: (event: E) => T.Task<CallbackResult>;
 };
 
 export class DefaultEventBus implements EventBus {
     private subscriptions: Map<
         string,
-        Map<string, List<SubscriptionWithCallback<any>>>
+        Map<string, List<SubscriptionWithCallback<any, any>>>
     > = Map();
     private idProvider: IdProvider;
 
@@ -41,7 +44,7 @@ export class DefaultEventBus implements EventBus {
         });
     }
 
-    subscribe<E extends Event>(
+    subscribe<T extends string, E extends Event<T>>(
         type: string,
         fn: (event: E) => T.Task<CallbackResult>,
         scope: string = DEFAULT_EVENT_SCOPE
@@ -65,7 +68,7 @@ export class DefaultEventBus implements EventBus {
         return result;
     }
 
-    publish<E extends Event>(
+    publish<T extends string, E extends Event<T>>(
         event: E,
         scope: string = DEFAULT_EVENT_SCOPE
     ): T.Task<void> {
@@ -99,7 +102,7 @@ export class DefaultEventBus implements EventBus {
     private getSubsriptionsBy(
         scope: string,
         type: string
-    ): List<SubscriptionWithCallback<any>> {
+    ): List<SubscriptionWithCallback<any, any>> {
         return this.subscriptions
             .get(scope, EMPTY_SCOPE)
             .get(type, NO_SUBSCRIBERS);

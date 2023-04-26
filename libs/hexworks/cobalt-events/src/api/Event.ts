@@ -4,9 +4,9 @@
  * `trace` can be used to check the chain of events that caused the current event. Each event
  * must also has an `emitter` which is the object that emitted the event.
  */
-export type Event = {
+export type Event<T extends string> = {
     /**
      * The type of the event..
      */
-    type: string;
+    type: T;
 };

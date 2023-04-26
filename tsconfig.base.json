@@ -41,6 +41,9 @@
             "@hexworks/cobalt-http": ["libs/hexworks/cobalt-http/src/index.ts"],
             "@hexworks/cobalt-scheduler": [
                 "libs/hexworks/cobalt-scheduler/src/index.ts"
+            ],
+            "@hexworks/cobalt-state": [
+                "libs/hexworks/cobalt-state/src/index.ts"
             ]
         }
     },

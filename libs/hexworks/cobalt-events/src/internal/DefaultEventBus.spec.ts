@@ -6,9 +6,9 @@ import { DEFAULT_EVENT_SCOPE, Event } from "../api";
 import { DefaultEventBus } from "./DefaultEventBus";
 import { List } from "immutable";
 
-const TEST_EVENT_TYPE = "test";
+const TEST_EVENT_TYPE = "test" as const;
 
-class TestEvent implements Event {
+class TestEvent implements Event<"test"> {
     public type = TEST_EVENT_TYPE;
 
     constructor(public readonly data: string) {}
@@ -29,7 +29,7 @@ describe("Given an event bus", () => {
 
             idProvider.generateId.mockReturnValue(id);
 
-            const { cancel, ...rest } = target.subscribe<TestEvent>(
+            const { cancel, ...rest } = target.subscribe(
                 TEST_EVENT_TYPE,
                 (e) => {
                     return T.of({
@@ -50,7 +50,7 @@ describe("Given an event bus", () => {
 
             idProvider.generateId.mockReturnValue(id);
 
-            target.subscribe<TestEvent>(TEST_EVENT_TYPE, (e) => {
+            target.subscribe(TEST_EVENT_TYPE, (e) => {
                 return T.of({
                     subscription: "Keep",
                 });
@@ -74,7 +74,7 @@ describe("Given an event bus", () => {
 
             let calls = 0;
 
-            target.subscribe<TestEvent>(TEST_EVENT_TYPE, (e) => {
+            target.subscribe(TEST_EVENT_TYPE, (e) => {
                 calls++;
                 return T.of({
                     subscription: "Keep",
@@ -93,7 +93,7 @@ describe("Given an event bus", () => {
 
             let calls = 0;
 
-            target.subscribe<TestEvent>(TEST_EVENT_TYPE, (e) => {
+            target.subscribe(TEST_EVENT_TYPE, (e) => {
                 calls++;
                 return T.of({
                     subscription: "Cancel",
@@ -118,14 +118,14 @@ describe("Given an event bus", () => {
 
             let calls = 0;
 
-            target.subscribe<TestEvent>(TEST_EVENT_TYPE, (e) => {
+            target.subscribe(TEST_EVENT_TYPE, (e) => {
                 calls++;
                 return T.of({
                     subscription: "Keep",
                 });
             });
 
-            target.subscribe<TestEvent>(TEST_EVENT_TYPE, (e) => {
+            target.subscribe(TEST_EVENT_TYPE, (e) => {
                 calls++;
                 return T.of({
                     subscription: "Keep",
@@ -147,14 +147,14 @@ describe("Given an event bus", () => {
 
             let calls = 0;
 
-            target.subscribe<TestEvent>(TEST_EVENT_TYPE, (e) => {
+            target.subscribe(TEST_EVENT_TYPE, (e) => {
                 calls++;
                 return T.of({
                     subscription: "Cancel",
                 });
             });
 
-            target.subscribe<TestEvent>(TEST_EVENT_TYPE, (e) => {
+            target.subscribe(TEST_EVENT_TYPE, (e) => {
                 calls++;
                 return T.of({
                     subscription: "Cancel",
@@ -178,14 +178,14 @@ describe("Given an event bus", () => {
             let firstCalls = 0;
             let secondCalls = 0;
 
-            target.subscribe<TestEvent>(TEST_EVENT_TYPE, (e) => {
+            target.subscribe(TEST_EVENT_TYPE, (e) => {
                 firstCalls++;
                 return T.of({
                     subscription: "Keep",
                 });
             });
 
-            target.subscribe<TestEvent>(TEST_EVENT_TYPE, (e) => {
+            target.subscribe(TEST_EVENT_TYPE, (e) => {
                 secondCalls++;
                 return T.of({
                     subscription: "Cancel",
@@ -206,7 +206,7 @@ describe("Given an event bus", () => {
 
             let calls = 0;
 
-            target.subscribe<TestEvent>(
+            target.subscribe(
                 TEST_EVENT_TYPE,
                 (e) => {
                     calls++;
@@ -228,7 +228,7 @@ describe("Given an event bus", () => {
 
             idProvider.generateId.mockReturnValue(id);
 
-            target.subscribe<TestEvent>(TEST_EVENT_TYPE, (e) => {
+            target.subscribe(TEST_EVENT_TYPE, (e) => {
                 return T.of({
                     subscription: "Keep",
                 });
@@ -244,7 +244,7 @@ describe("Given an event bus", () => {
 
             idProvider.generateId.mockReturnValue(id);
 
-            target.subscribe<TestEvent>(TEST_EVENT_TYPE, (e) => {
+            target.subscribe(TEST_EVENT_TYPE, (e) => {
                 return T.of({
                     subscription: "Keep",
                 });
@@ -262,7 +262,7 @@ describe("Given an event bus", () => {
                 .mockReturnValueOnce("1")
                 .mockReturnValueOnce("2");
 
-            target.subscribe<TestEvent>(
+            target.subscribe(
                 TEST_EVENT_TYPE,
                 (e) => {
                     return T.of({
@@ -272,7 +272,7 @@ describe("Given an event bus", () => {
                 DEFAULT_EVENT_SCOPE
             );
 
-            target.subscribe<TestEvent>(
+            target.subscribe(
                 TEST_EVENT_TYPE,
                 (e) => {
                     return T.of({

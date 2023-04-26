@@ -6,7 +6,7 @@ import { Job } from "./Job";
 export type JobContext<T extends JsonObject> = {
     data: T;
     job: Job<T>;
-    scheduler: Omit<Scheduler, "start" | "stop">;
+    scheduler: Pick<Scheduler, "schedule">;
 };
 
 export type JobExecutionResult<T extends JsonObject, R> = JobContext<T> & {

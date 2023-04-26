@@ -1,8 +1,15 @@
 import * as T from "fp-ts/Task";
 import * as TE from "fp-ts/TaskEither";
-import { JsonObject, JsonValue } from "type-fest";
-import { JobStorageError, JobNotFoundError } from "./error";
-import { AnyJob, Job, JobDescriptor, JobState } from "./job";
+import { List } from "immutable";
+import { JsonObject } from "type-fest";
+import {
+    AnyJob,
+    Job,
+    JobDescriptor,
+    JobNotFoundError,
+    JobState,
+    JobStorageError,
+} from ".";
 
 export type UnsavedLog = {
     note: string;
@@ -43,11 +50,24 @@ export type JobRepository = {
         name: string
     ) => TE.TaskEither<JobNotFoundError, Job<JsonObject>>;
     /**
+     * Tries to delete a job by its unique name.
+     */
+    deleteByName: (
+        name: string
+    ) => TE.TaskEither<JobNotFoundError, Job<JsonObject>>;
+    /**
+     * Tries to delete all jobs having the given correlationId.
+     * @returns the number of deleted records
+     */
+    deleteByCorrelationId: (
+        correlationId: string
+    ) => TE.TaskEither<JobStorageError, number>;
+    /**
      * Returns the next jobs that should be executed (eg: where scheduledAt <= now).
      * **Note that** this function also filters for job states that are in the
      * {@link JobState.SCHEDULED} state.
      */
-    findNextJobs: () => T.Task<AnyJob[]>;
+    findNextJobs: () => T.Task<List<AnyJob>>;
     /**
      * Creates or updates the given job.
      */

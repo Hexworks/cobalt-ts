@@ -8,7 +8,7 @@ export class JobExecutionError<
     constructor(
         public jobContext: JobContext<T>,
         public handler: JobHandler<T>,
-        public cause: ProgramError
+        override cause: ProgramError
     ) {
         super({
             __tag: "JobExecutionError",

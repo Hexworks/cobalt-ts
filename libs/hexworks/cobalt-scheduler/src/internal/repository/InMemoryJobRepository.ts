@@ -2,6 +2,7 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 import * as T from "fp-ts/Task";
 import * as TE from "fp-ts/TaskEither";
+import { List } from "immutable";
 import { JsonObject } from "type-fest";
 import {
     Job,
@@ -9,7 +10,7 @@ import {
     JobRepository,
     JobState,
     JobToSave,
-} from "../../";
+} from "../../api";
 
 /**
  * Reference implementation of a {@link JobRepository} that stores all jobs in memory.
@@ -68,12 +69,30 @@ export const InMemoryJobRepository = (): JobRepository => {
             }
             return TE.right(jobs.get(name)! as Job<T>);
         },
+        deleteByName: (name: string) => {
+            const job = jobs.get(name);
+            if (job) {
+                jobs.delete(name);
+                return TE.right(job);
+            } else {
+                return TE.left(new JobNotFoundError(name));
+            }
+        },
+        deleteByCorrelationId: (correlationId: string) => {
+            const toDelete = Array.from(jobs.values()).filter(
+                (job) => job.correlationId === correlationId
+            );
+            toDelete.forEach((job) => jobs.delete(job.name));
+            return TE.right(toDelete.length);
+        },
         findNextJobs: () => {
             return T.of(
-                Array.from(jobs.values()).filter(
-                    (job) =>
-                        job.scheduledAt < new Date() &&
-                        job.state === JobState.SCHEDULED
+                List.of(
+                    ...Array.from(jobs.values()).filter(
+                        (job) =>
+                            job.scheduledAt < new Date() &&
+                            job.state === JobState.SCHEDULED
+                    )
                 )
             );
         },

@@ -4,7 +4,6 @@ import * as TE from "fp-ts/TaskEither";
 import { Logger } from "tslog";
 import { JsonObject } from "type-fest";
 import { Schema } from "zod";
-import { JobExecutionError } from "../error";
 import {
     JobContext,
     JobDescriptor,
@@ -13,7 +12,8 @@ import {
     JobResult,
     OnErrorStrategy,
     OnResultStrategy,
-} from "../job";
+} from "./job";
+import { JobExecutionError } from "./error";
 
 type Params<T extends JsonObject> = {
     type: string;

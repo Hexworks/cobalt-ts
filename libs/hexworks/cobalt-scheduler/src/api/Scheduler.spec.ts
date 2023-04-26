@@ -3,6 +3,7 @@ import { ProgramError, UnknownError } from "@hexworks/cobalt-data";
 import * as E from "fp-ts/Either";
 import * as T from "fp-ts/Task";
 import * as TE from "fp-ts/TaskEither";
+import { List } from "immutable";
 import { MockProxy, any, mock } from "jest-mock-extended";
 import { Duration } from "luxon";
 import * as z from "zod";
@@ -144,7 +145,7 @@ describe("Given a Scheduler", () => {
 
     describe("When it is started", () => {
         test("Then it should check for jobs according to the config", async () => {
-            jobRepository.findNextJobs.mockReturnValue(T.of([]));
+            jobRepository.findNextJobs.mockReturnValue(T.of(List.of()));
 
             await target.start()();
 
@@ -152,7 +153,7 @@ describe("Given a Scheduler", () => {
         });
 
         test("Then it should reschedule after jobs are executed", async () => {
-            jobRepository.findNextJobs.mockReturnValue(T.of([]));
+            jobRepository.findNextJobs.mockReturnValue(T.of(List.of()));
 
             await target.start()();
 
@@ -188,7 +189,7 @@ describe("Given a Scheduler", () => {
         });
 
         test("Then it should reschedule after running all the jobs", async () => {
-            jobRepository.findNextJobs.mockReturnValue(T.of([]));
+            jobRepository.findNextJobs.mockReturnValue(T.of(List.of()));
 
             target.schedule({
                 name: "My Test Job",
@@ -216,7 +217,7 @@ describe("Given a Scheduler", () => {
 
         test("Then it should successfully schedule if the scheduler was running", async () => {
             handlers.set("NumberAdder", NumberAdder(false));
-            jobRepository.findNextJobs.mockReturnValue(T.of([]));
+            jobRepository.findNextJobs.mockReturnValue(T.of(List.of()));
             idProvider.generateId.mockReturnValue(CORRELATION_ID);
             jobRepository.upsert
                 .calledWith(any())
@@ -239,7 +240,7 @@ describe("Given a Scheduler", () => {
                 .calledWith(any())
                 .mockReturnValue(TE.right(SAVED_ADD_1_AND_2_JOB_FOR_LATER));
 
-            jobRepository.findNextJobs.mockReturnValue(T.of([]));
+            jobRepository.findNextJobs.mockReturnValue(T.of(List.of()));
 
             await target.start()();
 
@@ -253,7 +254,7 @@ describe("Given a Scheduler", () => {
                 .mockReturnValue(TE.right(SAVED_ADD_1_AND_2_JOB));
 
             jobRepository.findNextJobs.mockReturnValue(
-                T.of([SAVED_ADD_1_AND_2_JOB])
+                T.of(List.of(SAVED_ADD_1_AND_2_JOB))
             );
 
             await target.start()();
@@ -269,7 +270,7 @@ describe("Given a Scheduler", () => {
                 .mockReturnValue(TE.right(SAVED_ADD_1_AND_2_JOB));
 
             jobRepository.findNextJobs.mockReturnValue(
-                T.of([SAVED_ADD_1_AND_2_JOB])
+                T.of(List.of(SAVED_ADD_1_AND_2_JOB))
             );
 
             await target.start()();
@@ -287,7 +288,7 @@ describe("Given a Scheduler", () => {
                 .mockReturnValue(TE.right(SAVED_ADD_1_AND_2_JOB));
 
             jobRepository.findNextJobs.mockReturnValue(
-                T.of([SAVED_ADD_1_AND_2_JOB])
+                T.of(List.of(SAVED_ADD_1_AND_2_JOB))
             );
 
             await target.start()();
@@ -296,7 +297,7 @@ describe("Given a Scheduler", () => {
         });
 
         test("Then it fails when there is no handler for the scheduled job", async () => {
-            jobRepository.findNextJobs.mockReturnValue(T.of([]));
+            jobRepository.findNextJobs.mockReturnValue(T.of(List.of()));
 
             await target.start()();
 

@@ -1,6 +1,8 @@
+import { IdProvider } from "@hexworks/cobalt-core";
 import * as T from "fp-ts/Task";
 import { List } from "immutable";
 import { CallbackResult, Event, Subscription } from ".";
+import { DefaultEventBus } from "../internal";
 
 export const DEFAULT_EVENT_SCOPE = "DEFAULT_EVENT_SCOPE";
 
@@ -27,8 +29,8 @@ export interface EventBus {
      * of {@link Task} for more information), you need to take care of all errors
      * within the callback itself.
      */
-    subscribe<E extends Event>(
-        type: string,
+    subscribe<T extends string, E extends Event<T>>(
+        type: T,
         fn: (event: E) => T.Task<CallbackResult>,
         scope?: string
     ): Subscription;
@@ -37,10 +39,20 @@ export interface EventBus {
      * Publishes the given {@link Event} to all listeners that have the same
      * `scope` and `type`. By default {@link DEFAULT_EVENT_SCOPE} will be used.
      */
-    publish<E extends Event>(event: E, scope?: string): T.Task<void>;
+    publish<T extends string, E extends Event<T>>(
+        event: E,
+        scope?: string
+    ): T.Task<void>;
 
     /**
      * Cancels all [Subscription]s for the given [scope].
      */
     cancelScope(scope: string): void;
 }
+
+type Deps = {
+    idProvider: IdProvider;
+};
+
+export const create = ({ idProvider }: Deps): EventBus =>
+    new DefaultEventBus(idProvider);
