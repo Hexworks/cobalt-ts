@@ -1,4 +1,4 @@
-import { ProgramError, UnknownError } from "@hexworks/cobalt-data";
+import { ProgramError, UnknownError } from "@hexworks/cobalt-core";
 import { Event } from "@hexworks/cobalt-events";
 import * as RTE from "fp-ts/ReaderTaskEither";
 import { List, Map } from "immutable";

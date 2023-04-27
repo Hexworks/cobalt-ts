@@ -31,7 +31,6 @@
                 "libs/hexworks/cobalt-authorization/src/index.ts"
             ],
             "@hexworks/cobalt-core": ["libs/hexworks/cobalt-core/src/index.ts"],
-            "@hexworks/cobalt-data": ["libs/hexworks/cobalt-data/src/index.ts"],
             "@hexworks/cobalt-events": [
                 "libs/hexworks/cobalt-events/src/index.ts"
             ],

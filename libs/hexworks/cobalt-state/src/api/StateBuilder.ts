@@ -1,4 +1,4 @@
-import { ProgramError } from "@hexworks/cobalt-data";
+import { ProgramError } from "@hexworks/cobalt-core";
 import { Event } from "@hexworks/cobalt-events";
 import * as RTE from "fp-ts/ReaderTaskEither";
 import { State, StateInstance } from ".";

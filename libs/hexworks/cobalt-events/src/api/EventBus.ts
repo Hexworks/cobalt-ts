@@ -51,7 +51,7 @@ export interface EventBus {
 }
 
 type Deps = {
-    idProvider: IdProvider;
+    idProvider: IdProvider<string>;
 };
 
 export const create = ({ idProvider }: Deps): EventBus =>

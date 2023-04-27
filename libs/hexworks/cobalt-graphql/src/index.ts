@@ -1,1 +1,1 @@
-export * from "./GraphQLClient";
+export * from "./api";

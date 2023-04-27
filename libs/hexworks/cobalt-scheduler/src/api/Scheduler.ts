@@ -1,5 +1,5 @@
 import { IdProvider } from "@hexworks/cobalt-core";
-import { ProgramError, ZodValidationError } from "@hexworks/cobalt-data";
+import { ProgramError, ZodValidationError } from "@hexworks/cobalt-core";
 import * as TE from "fp-ts/TaskEither";
 import { Duration } from "luxon";
 import { JsonObject } from "type-fest";
@@ -69,7 +69,7 @@ type Deps = {
     jobRepository: JobRepository;
     handlers: Map<string, JobHandler<JsonObject>>;
     timer: Timer;
-    idProvider: IdProvider;
+    idProvider: IdProvider<string>;
     jobCheckInterval?: Duration;
 };
 

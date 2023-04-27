@@ -1,4 +1,4 @@
-import { ProgramErrorBase } from "@hexworks/cobalt-data";
+import { ProgramErrorBase } from "@hexworks/cobalt-core";
 
 export class NoHandlerFoundError extends ProgramErrorBase<"NoHandlerFoundError"> {
     constructor(type: string) {

@@ -16,10 +16,10 @@ class TestEvent implements Event<"test"> {
 
 describe("Given an event bus", () => {
     let target: DefaultEventBus;
-    let idProvider: MockProxy<IdProvider>;
+    let idProvider: MockProxy<IdProvider<string>>;
 
     beforeEach(() => {
-        idProvider = mock<IdProvider>();
+        idProvider = mock<IdProvider<string>>();
         target = new DefaultEventBus(idProvider);
     });
 

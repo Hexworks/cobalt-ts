@@ -1,5 +1,5 @@
 import { IdProvider, sleep } from "@hexworks/cobalt-core";
-import { ProgramError, UnknownError } from "@hexworks/cobalt-data";
+import { ProgramError, UnknownError } from "@hexworks/cobalt-core";
 import * as E from "fp-ts/Either";
 import * as T from "fp-ts/Task";
 import * as TE from "fp-ts/TaskEither";
@@ -121,7 +121,7 @@ describe("Given a Scheduler", () => {
     let jobRepository: MockProxy<JobRepository>;
     let handlers: Map<string, AnyJobHandler>;
     let timer: MockProxy<Timer>;
-    let idProvider: MockProxy<IdProvider>;
+    let idProvider: MockProxy<IdProvider<string>>;
     let target: Scheduler;
 
     beforeEach(() => {
@@ -130,7 +130,7 @@ describe("Given a Scheduler", () => {
 
         jobRepository = mock<JobRepository>();
         timer = mock<Timer>();
-        idProvider = mock<IdProvider>();
+        idProvider = mock<IdProvider<string>>();
 
         handlers = new Map();
         handlers.set("NumberAdder", NumberAdder(false));

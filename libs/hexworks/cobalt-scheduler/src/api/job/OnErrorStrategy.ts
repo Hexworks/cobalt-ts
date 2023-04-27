@@ -1,4 +1,4 @@
-import { ProgramError } from "@hexworks/cobalt-data";
+import { ProgramError } from "@hexworks/cobalt-core";
 import * as TE from "fp-ts/lib/TaskEither";
 import { JsonObject } from "type-fest";
 import { JobExecutionError } from "../error";

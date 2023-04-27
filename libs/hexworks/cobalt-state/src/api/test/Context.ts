@@ -1,4 +1,4 @@
-import { ProgramError } from "@hexworks/cobalt-data";
+import { ProgramError } from "@hexworks/cobalt-core";
 import { EventBus } from "@hexworks/cobalt-events";
 import { Scheduler } from "@hexworks/cobalt-scheduler";
 import * as TE from "fp-ts/lib/TaskEither";

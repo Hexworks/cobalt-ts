@@ -1,4 +1,4 @@
-import { ProgramError } from "@hexworks/cobalt-data";
+import { ProgramError } from "@hexworks/cobalt-core";
 import * as RTE from "fp-ts/ReaderTaskEither";
 import * as TE from "fp-ts/TaskEither";
 import { pipe } from "fp-ts/lib/function";

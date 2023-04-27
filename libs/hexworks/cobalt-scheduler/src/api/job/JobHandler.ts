@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { ProgramError } from "@hexworks/cobalt-data";
+import { ProgramError } from "@hexworks/cobalt-core";
 import * as TE from "fp-ts/TaskEither";
 import { JsonObject } from "type-fest";
 import { JobExecutionError } from "../error";

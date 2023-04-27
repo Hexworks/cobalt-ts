@@ -27,9 +27,9 @@ export class DefaultEventBus implements EventBus {
         string,
         Map<string, List<SubscriptionWithCallback<any, any>>>
     > = Map();
-    private idProvider: IdProvider;
+    private idProvider: IdProvider<string>;
 
-    constructor(idProvider: IdProvider) {
+    constructor(idProvider: IdProvider<string>) {
         this.idProvider = idProvider;
     }
 

@@ -1,4 +1,4 @@
-import { ProgramErrorBase } from "@hexworks/cobalt-data";
+import { ProgramErrorBase } from "@hexworks/cobalt-core";
 
 export class JobAlreadyExistsError extends ProgramErrorBase<"JobAlreadyExistsError"> {
     constructor(override name: string) {

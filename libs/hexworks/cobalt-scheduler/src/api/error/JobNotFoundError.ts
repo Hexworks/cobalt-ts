@@ -1,4 +1,4 @@
-import { ProgramErrorBase } from "@hexworks/cobalt-data";
+import { ProgramErrorBase } from "@hexworks/cobalt-core";
 
 export class JobNotFoundError extends ProgramErrorBase<"JobNotFoundError"> {
     constructor(name: string) {

@@ -1,5 +1,5 @@
 import { IdProvider, createLogger } from "@hexworks/cobalt-core";
-import { ProgramError, UnknownError, toJson } from "@hexworks/cobalt-data";
+import { ProgramError, UnknownError, toJson } from "@hexworks/cobalt-core";
 import * as TE from "fp-ts/TaskEither";
 import { pipe } from "fp-ts/lib/function";
 import { Duration } from "luxon";
@@ -33,7 +33,7 @@ export class DefaultScheduler implements Scheduler {
         private jobRepository: JobRepository,
         private handlers: Map<string, JobHandler<JsonObject>>,
         private timer: Timer,
-        private idProvider: IdProvider,
+        private idProvider: IdProvider<string>,
         private jobCheckInterval: Duration
     ) {}
 

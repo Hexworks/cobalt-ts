@@ -10,12 +10,12 @@ import {
     safeParseAsync,
     TaskResult,
     UnknownError,
-} from "@hexworks/cobalt-data";
+} from "@hexworks/cobalt-core";
 import fetch from "cross-fetch";
 import { pipe } from "fp-ts/function";
 import * as TE from "fp-ts/TaskEither";
 import * as z from "zod";
-import { GraphQLClient } from "..";
+import { GraphQLClient } from "../api";
 
 export class ApolloGraphQLClient implements GraphQLClient {
     private readonly client: ApolloClient<NormalizedCacheObject>;

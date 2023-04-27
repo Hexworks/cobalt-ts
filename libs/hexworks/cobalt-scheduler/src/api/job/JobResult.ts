@@ -1,4 +1,4 @@
-import { ProgramError } from "@hexworks/cobalt-data";
+import { ProgramError } from "@hexworks/cobalt-core";
 
 /**
  * Represents the result of a {@link Job}. You can use the `type` property to

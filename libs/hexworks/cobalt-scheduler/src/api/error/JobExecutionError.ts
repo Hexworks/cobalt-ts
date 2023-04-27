@@ -1,4 +1,4 @@
-import { ProgramError, ProgramErrorBase } from "@hexworks/cobalt-data";
+import { ProgramError, ProgramErrorBase } from "@hexworks/cobalt-core";
 import { JsonObject } from "type-fest";
 import { JobContext, JobHandler } from "../job";
 

@@ -1,5 +1,5 @@
 import { createLogger } from "@hexworks/cobalt-core";
-import { ProgramError } from "@hexworks/cobalt-data";
+import { ProgramError } from "@hexworks/cobalt-core";
 import * as TE from "fp-ts/TaskEither";
 import { Logger } from "tslog";
 import { JsonObject } from "type-fest";
