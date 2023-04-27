@@ -2,6 +2,7 @@ import { ProgramError } from "@hexworks/cobalt-core";
 import * as RTE from "fp-ts/ReaderTaskEither";
 import * as TE from "fp-ts/TaskEither";
 import { pipe } from "fp-ts/lib/function";
+import { Schema } from "zod";
 import { AnyEventWithType, StateBuilder, Transition } from ".";
 import { DefaultStateBuilder } from "../internal";
 
@@ -16,6 +17,10 @@ export type AnyStateWithContext<C> = State<any, C, string>;
  * @param N The name of the state.
  */
 export type State<D, C, N extends string> = {
+    /**
+     * The schema of the data that is stored in the state.
+     */
+    readonly schema: Schema<D>;
     /**
      * The name of the state (must be unique within a state machine).
      */

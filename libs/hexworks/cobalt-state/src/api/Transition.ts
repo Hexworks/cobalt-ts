@@ -16,13 +16,13 @@ export type Transition<D, C, R, T extends string, E extends Event<T>> = {
     /**
      * The condition that must be met for the transition to be executed.
      */
-    condition: (event: E, data: D) => boolean;
+    condition: (data: D, event: E) => boolean;
     /**
      * Executes the state transition and returns the new {@link StateInstance}
      * or an error if the transition failed.
      */
     transitionTo: (
-        event: E,
-        data: D
+        data: D,
+        event: E
     ) => RTE.ReaderTaskEither<C, ProgramError, StateInstance<R, C, string>>;
 };

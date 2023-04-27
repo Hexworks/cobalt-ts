@@ -1,28 +1,39 @@
-import { BaseState, Context, FormSubmitted, TimedOut } from "..";
+import { Reporting, WaitingForInput } from ".";
+import { Context, EventType, FormSubmitted, TimedOut } from "..";
 import { executeWithContext, newState, state } from "../..";
-import { Reporting } from "./Reporting";
-import { WaitingForInput } from "./WaitingForInput";
+import { StateType } from "./StateType";
+import { BaseState } from "./schema";
 
-export const FillingForm = state<BaseState, Context>("FillingForm")
+export const FillingForm = state<BaseState, Context>(StateType.FillingForm)
+    .withSchema(BaseState)
     .onEntry(
-        executeWithContext(({ userId }, { scheduler }) =>
+        executeWithContext(({ userId, correlationId }, { scheduler }) =>
             scheduler.schedule({
                 type: "Timeout",
                 data: { userId },
                 name: `Timeout user ${userId}`,
                 scheduledAt: new Date(),
+                correlationId,
             })
         )
     )
-    .onEvent<TimedOut>("TimedOut", (transition) =>
-        transition.transitionTo(({ user }) =>
-            newState(WaitingForInput, { userId: user.id, bumpCount: 0 })
+    .onExit(
+        executeWithContext(({ correlationId }, { scheduler }) =>
+            scheduler.cancelByCorrelationId(correlationId)
         )
     )
-    .onEvent<FormSubmitted>("FormSubmitted", (transition) =>
-        transition.transitionTo(({ user, data }) =>
+    .onEvent<TimedOut>(EventType.TimedOut, (transition) =>
+        transition.transitionTo((state) =>
+            newState(WaitingForInput, {
+                ...state,
+                bumpCount: 0,
+            })
+        )
+    )
+    .onEvent<FormSubmitted>(EventType.FormSubmitted, (transition) =>
+        transition.transitionTo((state, { data }) =>
             newState(Reporting, {
-                userId: user.id,
+                ...state,
                 data,
             })
         )

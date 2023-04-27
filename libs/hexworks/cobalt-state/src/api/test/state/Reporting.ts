@@ -1,11 +1,11 @@
 import * as TE from "fp-ts/lib/TaskEither";
 import { pipe } from "fp-ts/lib/function";
-import { BaseState, Context } from "..";
+import { ReportingData } from ".";
+import { Context } from "..";
 import { executeWithContext, state } from "../..";
 
-export type ReportingData = BaseState & { data: string };
-
 export const Reporting = state<ReportingData, Context>("Reporting")
+    .withSchema(ReportingData)
     .onEntry(
         executeWithContext(
             ({ userId, data }, { formDataRepository, eventBus }) =>
