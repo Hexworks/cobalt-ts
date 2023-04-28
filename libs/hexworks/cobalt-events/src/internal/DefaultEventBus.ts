@@ -8,6 +8,7 @@ import {
     DEFAULT_EVENT_SCOPE,
     Event,
     EventBus,
+    GetEventType,
     Subscription,
     SubscriptionDescriptor,
 } from "../api";
@@ -16,8 +17,8 @@ const EMPTY_SCOPE = Map<string, List<SubscriptionWithCallback<any, any>>>();
 const NO_SUBSCRIBERS = List<SubscriptionWithCallback<any, any>>();
 
 type SubscriptionWithCallback<
-    T extends string,
-    E extends Event<T>
+    E extends Event<T>,
+    T extends string = GetEventType<E>
 > = Subscription & {
     fn: (event: E) => T.Task<CallbackResult>;
 };

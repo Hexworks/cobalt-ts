@@ -14,8 +14,6 @@ describe("Given an error object", () => {
 
             const result = safeParse(ProgramErrorSchema)(error);
 
-            console.log(result);
-
             expect(result).toEqual(E.right(error));
         });
     });

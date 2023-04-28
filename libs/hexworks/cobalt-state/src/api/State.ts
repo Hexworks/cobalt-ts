@@ -6,6 +6,8 @@ import { Schema } from "zod";
 import { AnyEventWithType, StateBuilder, Transition } from ".";
 import { DefaultStateBuilder } from "../internal";
 
+export type UnknownStateWithContext<C> = State<unknown, C, string>;
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type AnyStateWithContext<C> = State<any, C, string>;
 
@@ -33,7 +35,7 @@ export type State<D, C, N extends string> = {
      */
     readonly transitions: {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        [T in string]: Transition<D, C, any, T, AnyEventWithType<T>>[];
+        [T in string]: Transition<D, C, unknown, T, AnyEventWithType<T>>[];
     };
     /**
      * An action that will be executed when the state is **entered**.

@@ -1,6 +1,7 @@
 import { ZodValidationError } from "@hexworks/cobalt-core";
 import { EventBus } from "@hexworks/cobalt-events";
 import { JobState, Scheduler } from "@hexworks/cobalt-scheduler";
+import * as T from "fp-ts/Task";
 import * as E from "fp-ts/lib/Either";
 import * as TE from "fp-ts/lib/TaskEither";
 import { List } from "immutable";
@@ -8,7 +9,6 @@ import { MockProxy, mock } from "jest-mock-extended";
 import {
     AnyStateWithContext,
     Dispatcher,
-    ThisIsABugError,
     UnknownEventError,
     UnknownStateError,
     dispatcher,
@@ -118,8 +118,11 @@ describe("Given a state machine dispatcher", () => {
             );
         });
 
-        test("Then it fails if the transition condition doesn't hold", async () => {
+        test("Then it succeeds with the default transition when the condition doesn't hold", async () => {
             const acceptableEvent = new BumpSent(TEST_USER);
+
+            formDataRepository.save.mockReturnValueOnce(TE.right(undefined));
+            eventBus.publish.mockReturnValueOnce(T.of(undefined));
 
             const result = await target.dispatch(
                 StateType.WaitingForInput,
@@ -131,7 +134,17 @@ describe("Given a state machine dispatcher", () => {
                 acceptableEvent
             )(context)();
 
-            console.log(result);
+            expect(result).toEqual(
+                E.right({
+                    state: Reporting,
+                    data: {
+                        userId: "test",
+                        correlationId: "asdfaw3weasdf",
+                        bumpCount: 6,
+                        data: "no data",
+                    },
+                })
+            );
         });
 
         test("Then it succeeds when the proper event is sent", async () => {
@@ -154,9 +167,12 @@ describe("Given a state machine dispatcher", () => {
 
             expect(result).toEqual(
                 E.right({
-                    user: TEST_USER,
-                    type: EventType.TimedOut,
-                    bumpCount: 0,
+                    state: WaitingForInput,
+                    data: {
+                        userId: TEST_USER.id,
+                        bumpCount: 0,
+                        correlationId,
+                    },
                 })
             );
         });

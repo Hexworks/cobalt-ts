@@ -70,8 +70,7 @@ export class JobHandlerBase<T extends JsonObject> implements JobHandler<T> {
         this.errorStrategies = errorStrategies ?? [];
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    canExecute(info: JobDescriptor<any>): info is JobDescriptor<T> {
+    canExecute(info: JobDescriptor<JsonObject>): info is JobDescriptor<T> {
         return this.inputSchema.safeParse(info.data).success;
     }
 

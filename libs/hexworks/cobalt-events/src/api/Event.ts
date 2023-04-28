@@ -10,3 +10,8 @@ export type Event<T extends string> = {
      */
     type: T;
 };
+
+/**
+ * Can be used to infer the type of the event.
+ */
+export type GetEventType<T> = T extends Event<infer U> ? U : never;

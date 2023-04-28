@@ -36,7 +36,6 @@ describe("Given a ZodValidationError", () => {
             throw new Error("Should have failed.");
         } else {
             const report = new ZodValidationError(result.error).errorReport;
-            console.log(JSON.stringify(report, null, 2));
             // expect(report._errors).toEqual([]);
         }
     });

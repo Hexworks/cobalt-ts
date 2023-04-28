@@ -2,7 +2,7 @@ import { JsonObject } from "type-fest";
 import { JobDescriptor, JobLog, JobState } from ".";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type AnyJob = Job<any>;
+export type AnyJob = Job<JsonObject>;
 
 /**
  * Represents an individual **job** instance.

@@ -61,7 +61,6 @@ export class DefaultStateBuilder<S, C, N extends string>
     }
 
     build(): State<S, C, N> {
-        console.log(this.params.transitions);
         return this.params;
     }
 }
@@ -84,7 +83,7 @@ class DefaultTransitionBuilder<
         private type: T,
         private transitions: {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            [T in string]: Transition<S, C, any, T, AnyEventWithType<T>>[];
+            [T in string]: Transition<S, C, unknown, T, AnyEventWithType<T>>[];
         }
     ) {
         if (!this.transitions[this.type]) {
@@ -108,7 +107,7 @@ class DefaultTransitionBuilder<
         this.transitions[this.type]?.push({
             condition: this.cond ?? fail("No condition provided"),
             transitionTo: fn,
-        });
+        } as Transition<S, C, unknown, string, Event<string>>);
         this.cond = undefined;
         return this;
     }
@@ -130,7 +129,14 @@ class DefaultTransitionBuilder<
     ): StateBuilder<S, C, N> {
         this.transitions[this.type]?.push({
             condition: passThroughCond,
-            transitionTo: fn,
+            transitionTo: fn as (
+                data: S,
+                event: Event<string>
+            ) => RTE.ReaderTaskEither<
+                C,
+                ProgramError,
+                StateInstance<unknown, C, string>
+            >,
         });
 
         return this.stateBuilder;

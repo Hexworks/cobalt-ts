@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { ProgramError } from "@hexworks/cobalt-core";
 import * as RTE from "fp-ts/ReaderTaskEither";
 import { Authorization, Context } from ".";

@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 import * as T from "fp-ts/Task";
 import * as TE from "fp-ts/TaskEither";

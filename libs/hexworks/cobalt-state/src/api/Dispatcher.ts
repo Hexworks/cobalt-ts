@@ -6,10 +6,12 @@ import { List, Map, Set } from "immutable";
 import {
     AnyStateWithContext,
     DispatcherError,
-    ThisIsABugError,
+    State,
     StateInstance,
+    ThisIsABugError,
     UnknownEventError,
     UnknownStateError,
+    UnknownStateWithContext,
 } from ".";
 import { StateTransitionError } from "./errors/StateTransitionError";
 
@@ -31,29 +33,44 @@ export const dispatcher = <C>(
 ): Dispatcher<C> => {
     const lookup = possibleStates.reduce(
         (map, state) => map.set(state.name, state),
-        Map<string, AnyStateWithContext<C>>()
+        Map<string, UnknownStateWithContext<C>>()
     );
 
     const supportedEventTypes = possibleStates
         .flatMap((state) => Object.keys(state.transitions))
         .toSet();
 
-    const dispatch = <D>(stateName: string, data: D, event: Event<string>) => {
-        const state = lookup.get(stateName);
+    const dispatch = <D>(
+        stateName: string,
+        data: D,
+        event: Event<string>
+    ): RTE.ReaderTaskEither<
+        C,
+        DispatcherError,
+        StateInstance<unknown, C, string>
+    > => {
+        const state = lookup.get(stateName) as State<D, C, string> | undefined;
         const eventType = event.type;
         if (state) {
             const transitions = state.transitions[eventType];
             if (transitions) {
                 const transition = transitions.find((t) =>
-                    t.condition(event, data)
+                    t.condition(data, event)
                 );
-                console.log(transition);
                 if (transition) {
                     return pipe(
                         RTE.fromTaskEither(safeParseAsync(state.schema)(data)),
                         RTE.chain(() => state.onExit(data)),
-                        RTE.chain((d) => transition.transitionTo(event, d)),
-                        RTE.chain((s) => s.state.onEntry(s.data)),
+                        RTE.chain((d) => transition.transitionTo(d, event)),
+                        RTE.chain((stateInstance) =>
+                            pipe(
+                                stateInstance.state.onEntry(stateInstance.data),
+                                RTE.map((d) => ({
+                                    state: stateInstance.state,
+                                    data: d,
+                                }))
+                            )
+                        ),
                         RTE.mapLeft(
                             (e) => new StateTransitionError(state.name, e)
                         )

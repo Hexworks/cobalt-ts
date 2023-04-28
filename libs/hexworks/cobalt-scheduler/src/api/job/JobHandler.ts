@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
 import { ProgramError } from "@hexworks/cobalt-core";
 import * as TE from "fp-ts/TaskEither";
 import { JsonObject } from "type-fest";
@@ -8,6 +6,7 @@ import { JobContext, JobExecutionResult } from "./JobContext";
 import { JobDescriptor } from "./JobDescriptor";
 import { JobResult } from "./JobResult";
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type AnyJobHandler = JobHandler<any>;
 
 export type AnyExecutionResult = TE.TaskEither<
@@ -30,7 +29,7 @@ export interface JobHandler<T extends JsonObject> {
     /**
      * Tells whether this handler can execute the given {@link JobDescriptor}.
      */
-    canExecute: (info: JobDescriptor<any>) => info is JobDescriptor<T>;
+    canExecute: (info: JobDescriptor<JsonObject>) => info is JobDescriptor<T>;
     /**
      * Executes the task with the given {@link JobDescriptor}.
      */
