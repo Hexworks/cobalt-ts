@@ -1,23 +1,25 @@
-import { BaseState, FillingForm, WaitingForInput } from ".";
 import { Context, EventType, PromptSent, UserInitiatedForm } from "..";
 import { executeWithContext, newState, state } from "../..";
+import { FillingForm } from "./FillingForm";
+import { WaitingForInput } from "./WaitingForInput";
+import { BaseState } from "./schema";
 
 export const Idle = state<BaseState, Context>("Idle")
     .withSchema(BaseState)
     .onEntry(
-        executeWithContext(({ userId, correlationId }, { scheduler }) => {
+        executeWithContext(({ userId, key }, { scheduler }) => {
             return scheduler.schedule({
                 type: "Prompt",
                 data: { userId },
                 name: `Prompt user ${userId}`,
                 scheduledAt: new Date(), // TODO: how do we determine this?
-                correlationId,
+                correlationId: key,
             });
         })
     )
     .onExit(
-        executeWithContext(({ correlationId }, { scheduler }) =>
-            scheduler.cancelByCorrelationId(correlationId)
+        executeWithContext(({ key }, { scheduler }) =>
+            scheduler.cancelByCorrelationId(key)
         )
     )
     .onEvent<UserInitiatedForm>(EventType.UserInitiatedForm, (transition) =>

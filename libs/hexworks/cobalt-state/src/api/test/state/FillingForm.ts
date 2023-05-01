@@ -7,19 +7,19 @@ import { BaseState } from "./schema";
 export const FillingForm = state<BaseState, Context>(StateType.FillingForm)
     .withSchema(BaseState)
     .onEntry(
-        executeWithContext(({ userId, correlationId }, { scheduler }) =>
+        executeWithContext(({ userId, key }, { scheduler }) =>
             scheduler.schedule({
                 type: "Timeout",
                 data: { userId },
                 name: `Timeout user ${userId}`,
                 scheduledAt: new Date(),
-                correlationId,
+                correlationId: key,
             })
         )
     )
     .onExit(
-        executeWithContext(({ correlationId }, { scheduler }) =>
-            scheduler.cancelByCorrelationId(correlationId)
+        executeWithContext(({ key }, { scheduler }) =>
+            scheduler.cancelByCorrelationId(key)
         )
     )
     .onEvent<TimedOut>(EventType.TimedOut, (transition) =>

@@ -1,6 +1,8 @@
-import { safeParseAsync } from "@hexworks/cobalt-core";
-import { Event } from "@hexworks/cobalt-events";
+import { ProgramError, safeParseAsync } from "@hexworks/cobalt-core";
+import { Event, EventBus, SubscriptionOption } from "@hexworks/cobalt-events";
 import * as RTE from "fp-ts/ReaderTaskEither";
+import * as TE from "fp-ts/TaskEither";
+import * as T from "fp-ts/lib/Task";
 import { pipe } from "fp-ts/lib/function";
 import { List, Map, Set } from "immutable";
 import {
@@ -8,6 +10,7 @@ import {
     DispatcherError,
     State,
     StateInstance,
+    StateRepository,
     ThisIsABugError,
     UnknownEventError,
     UnknownStateError,
@@ -15,12 +18,23 @@ import {
 } from ".";
 import { StateTransitionError } from "./errors/StateTransitionError";
 
-export type Dispatcher<C> = {
+type Deps<I> = {
+    eventBus: EventBus;
+    stateInstanceRepository: StateRepository<I>;
+    errorReporter: (error: ProgramError, event: Event<string>) => T.Task<void>;
+};
+
+export type AutoDispatcher = {
+    stop: () => void;
+};
+
+export type Dispatcher<C, E extends Event<string> = Event<string>> = {
     supportedEventTypes: Set<string>;
+    supportedStates: Map<string, UnknownStateWithContext<C>>;
     dispatch: <D>(
         stateName: string,
         data: D,
-        event: Event<string>
+        event: E
     ) => RTE.ReaderTaskEither<
         C,
         DispatcherError,
@@ -28,10 +42,62 @@ export type Dispatcher<C> = {
     >;
 };
 
-export const dispatcher = <C>(
+export type EventWithStateKey<K> = Event<string> & {
+    stateKey: K;
+};
+
+export const autoDispatch = <C, K, E extends EventWithStateKey<K>>(
+    dispatcher: Dispatcher<C, E>
+): RTE.ReaderTaskEither<C & Deps<K>, ProgramError, AutoDispatcher> => {
+    const supportedEventTypes = dispatcher.supportedEventTypes;
+    return pipe(
+        RTE.ask<C & Deps<K>>(),
+        RTE.map((ctx) => {
+            const { eventBus, stateInstanceRepository, errorReporter } = ctx;
+            return supportedEventTypes.map((eventType) =>
+                eventBus.subscribe<string, E>(eventType, (event) => {
+                    const key = event.stateKey;
+                    return pipe(
+                        stateInstanceRepository.findByKey(key),
+                        TE.chainW((entity) => {
+                            const { stateName, data } = entity;
+                            return dispatcher.dispatch(
+                                stateName,
+                                data,
+                                event
+                            )(ctx);
+                        }),
+                        TE.chainW(({ state, data }) => {
+                            return stateInstanceRepository.upsert({
+                                key: key,
+                                stateName: state.name,
+                                data,
+                            });
+                        }),
+                        TE.getOrElseW((e) => errorReporter(e, event)),
+                        T.map(() => ({
+                            subscription: SubscriptionOption.Keep,
+                        }))
+                    );
+                })
+            );
+        }),
+        RTE.map((subscriptions) => {
+            return {
+                stop: () => {
+                    subscriptions.forEach((subscription) =>
+                        subscription.cancel()
+                    );
+                },
+            };
+        })
+    );
+};
+
+export const dispatcher = <C, E extends Event<string>>(
     possibleStates: List<AnyStateWithContext<C>>
-): Dispatcher<C> => {
-    const lookup = possibleStates.reduce(
+): Dispatcher<C, E> => {
+    const supportedStates = possibleStates.reduce(
         (map, state) => map.set(state.name, state),
         Map<string, UnknownStateWithContext<C>>()
     );
@@ -49,7 +115,9 @@ export const dispatcher = <C>(
         DispatcherError,
         StateInstance<unknown, C, string>
     > => {
-        const state = lookup.get(stateName) as State<D, C, string> | undefined;
+        const state = supportedStates.get(stateName) as
+            | State<D, C, string>
+            | undefined;
         const eventType = event.type;
         if (state) {
             const transitions = state.transitions[eventType];
@@ -85,5 +153,6 @@ export const dispatcher = <C>(
             return RTE.left(new UnknownStateError(stateName));
         }
     };
-    return { supportedEventTypes, dispatch };
+
+    return { supportedStates, supportedEventTypes, dispatch };
 };
