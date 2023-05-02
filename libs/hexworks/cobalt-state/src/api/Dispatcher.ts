@@ -1,5 +1,6 @@
 import { ProgramError, safeParseAsync } from "@hexworks/cobalt-core";
 import { Event, EventBus, SubscriptionOption } from "@hexworks/cobalt-events";
+import * as R from "fp-ts/Reader";
 import * as RTE from "fp-ts/ReaderTaskEither";
 import * as TE from "fp-ts/TaskEither";
 import * as T from "fp-ts/lib/Task";
@@ -18,10 +19,14 @@ import {
 } from ".";
 import { StateTransitionError } from "./errors/StateTransitionError";
 
-type Deps<I> = {
+export type ErrorReporter = {
+    report: (error: ProgramError, event: Event<string>) => T.Task<void>;
+};
+
+export type AutoDispatcherDeps<I> = {
     eventBus: EventBus;
-    stateInstanceRepository: StateRepository<I>;
-    errorReporter: (error: ProgramError, event: Event<string>) => T.Task<void>;
+    stateRepository: StateRepository<I>;
+    errorReporter: ErrorReporter;
 };
 
 export type AutoDispatcher = {
@@ -46,19 +51,25 @@ export type EventWithStateKey<K> = Event<string> & {
     stateKey: K;
 };
 
-export const autoDispatch = <C, K, E extends EventWithStateKey<K>>(
+type GetEventTypeWithKey<T> = T extends EventWithStateKey<infer K> ? K : never;
+
+export const autoDispatch = <
+    C,
+    E extends EventWithStateKey<K>,
+    K = GetEventTypeWithKey<E>
+>(
     dispatcher: Dispatcher<C, E>
-): RTE.ReaderTaskEither<C & Deps<K>, ProgramError, AutoDispatcher> => {
+): R.Reader<C & AutoDispatcherDeps<K>, AutoDispatcher> => {
     const supportedEventTypes = dispatcher.supportedEventTypes;
     return pipe(
-        RTE.ask<C & Deps<K>>(),
-        RTE.map((ctx) => {
-            const { eventBus, stateInstanceRepository, errorReporter } = ctx;
+        R.ask<C & AutoDispatcherDeps<K>>(),
+        R.map((ctx) => {
+            const { eventBus, stateRepository, errorReporter } = ctx;
             return supportedEventTypes.map((eventType) =>
                 eventBus.subscribe<string, E>(eventType, (event) => {
                     const key = event.stateKey;
                     return pipe(
-                        stateInstanceRepository.findByKey(key),
+                        stateRepository.findByKey(key),
                         TE.chainW((entity) => {
                             const { stateName, data } = entity;
                             return dispatcher.dispatch(
@@ -68,13 +79,13 @@ export const autoDispatch = <C, K, E extends EventWithStateKey<K>>(
                             )(ctx);
                         }),
                         TE.chainW(({ state, data }) => {
-                            return stateInstanceRepository.upsert({
+                            return stateRepository.upsert({
                                 key: key,
                                 stateName: state.name,
                                 data,
                             });
                         }),
-                        TE.getOrElseW((e) => errorReporter(e, event)),
+                        TE.getOrElseW((e) => errorReporter.report(e, event)),
                         T.map(() => ({
                             subscription: SubscriptionOption.Keep,
                         }))
@@ -82,7 +93,7 @@ export const autoDispatch = <C, K, E extends EventWithStateKey<K>>(
                 })
             );
         }),
-        RTE.map((subscriptions) => {
+        R.map((subscriptions) => {
             return {
                 stop: () => {
                     subscriptions.forEach((subscription) =>

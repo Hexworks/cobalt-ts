@@ -54,5 +54,5 @@ type Deps = {
     idProvider: IdProvider<string>;
 };
 
-export const create = ({ idProvider }: Deps): EventBus =>
+export const EventBus = ({ idProvider }: Deps): EventBus =>
     new DefaultEventBus(idProvider);

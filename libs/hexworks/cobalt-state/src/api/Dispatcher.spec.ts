@@ -8,8 +8,11 @@ import { List } from "immutable";
 import { MockProxy, mock, objectContainsValue } from "jest-mock-extended";
 import {
     AnyStateWithContext,
+    AutoDispatcherDeps,
     Dispatcher,
+    ErrorReporter,
     EventWithStateKey,
+    StateRepository,
     UnknownEventError,
     UnknownStateError,
     dispatcher,
@@ -50,10 +53,12 @@ const JOB_STUB = (correlationId: string) => ({
 
 describe("Given a state machine dispatcher", () => {
     let target: Dispatcher<Context, EventWithStateKey<string>>;
-    let context: Context;
+    let context: Context & AutoDispatcherDeps<string>;
     let eventBus: MockProxy<EventBus>;
     let formDataRepository: MockProxy<FormDataRepository>;
     let scheduler: MockProxy<Scheduler>;
+    let stateInstanceRepository: MockProxy<StateRepository<string>>;
+    let errorReporter: MockProxy<ErrorReporter>;
 
     beforeEach(() => {
         eventBus = mock<EventBus>();
@@ -61,11 +66,15 @@ describe("Given a state machine dispatcher", () => {
         // eslint-disable-next-line @typescript-eslint/ban-ts-comment
         // @ts-ignore
         scheduler = mock<Scheduler>();
+        stateInstanceRepository = mock<StateRepository<string>>();
+        errorReporter = mock<ErrorReporter>();
 
         context = {
             eventBus,
             formDataRepository,
             scheduler,
+            stateRepository: stateInstanceRepository,
+            errorReporter,
         };
         target = dispatcher(
             List.of<AnyStateWithContext<Context>>(
