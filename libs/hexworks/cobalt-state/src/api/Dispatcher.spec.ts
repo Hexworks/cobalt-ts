@@ -1,11 +1,12 @@
 import { ZodValidationError } from "@hexworks/cobalt-core";
 import { EventBus } from "@hexworks/cobalt-events";
-import { JobState, Scheduler } from "@hexworks/cobalt-scheduler";
+import { Job, JobState, Scheduler } from "@hexworks/cobalt-scheduler";
 import * as T from "fp-ts/Task";
 import * as E from "fp-ts/lib/Either";
 import * as TE from "fp-ts/lib/TaskEither";
 import { List } from "immutable";
 import { MockProxy, mock, objectContainsValue } from "jest-mock-extended";
+import { JsonObject } from "type-fest";
 import {
     AnyStateWithContext,
     AutoDispatcherDeps,
@@ -38,18 +39,35 @@ const TEST_USER: User = {
     id: "test",
 };
 
-const JOB_STUB = (correlationId: string) => ({
-    correlationId,
-    currentFailCount: 0,
-    data: {},
-    log: [],
-    name: "test",
-    state: JobState.SCHEDULED,
-    type: "Timeout",
-    createdAt: new Date(),
-    scheduledAt: new Date(),
-    updatedAt: new Date(),
-});
+export const JOB_STUB = (job: Partial<Job<JsonObject>>): Job<JsonObject> => {
+    const {
+        correlationId = `correlationId`,
+        type = `type`,
+        currentFailCount = 0,
+        data = {},
+        log = [],
+        name = `name`,
+        state = JobState.SCHEDULED,
+        previouslyScheduledAt = new Date(),
+        createdAt = new Date(),
+        scheduledAt = new Date(),
+        updatedAt = new Date(),
+    } = job;
+    return {
+        correlationId,
+        type,
+
+        currentFailCount,
+        data,
+        log,
+        name,
+        state,
+        previouslyScheduledAt,
+        createdAt,
+        scheduledAt,
+        updatedAt,
+    };
+};
 
 describe("Given a state machine dispatcher", () => {
     let target: Dispatcher<Context, EventWithStateKey<string>>;
@@ -114,7 +132,7 @@ describe("Given a state machine dispatcher", () => {
 
             scheduler.schedule
                 .calledWith(objectContainsValue("Bump"))
-                .mockReturnValue(TE.right(JOB_STUB(key)));
+                .mockReturnValue(TE.right(JOB_STUB({ correlationId: key })));
 
             const result = await target.dispatch(
                 StateType.Idle,
@@ -189,7 +207,9 @@ describe("Given a state machine dispatcher", () => {
             const key = "asdfaw3weasdf";
             const acceptableEvent = new BumpSent(key);
 
-            scheduler.schedule.mockReturnValueOnce(TE.right(JOB_STUB(key)));
+            scheduler.schedule.mockReturnValueOnce(
+                TE.right(JOB_STUB({ correlationId: key }))
+            );
 
             const result = await target.dispatch(
                 StateType.WaitingForInput,
@@ -218,7 +238,9 @@ describe("Given a state machine dispatcher", () => {
             const acceptableEvent = new TimedOut(key);
 
             scheduler.cancelByCorrelationId.mockReturnValueOnce(TE.right(true));
-            scheduler.schedule.mockReturnValueOnce(TE.right(JOB_STUB(key)));
+            scheduler.schedule.mockReturnValueOnce(
+                TE.right(JOB_STUB({ correlationId: key }))
+            );
 
             const result = await target.dispatch(
                 StateType.FillingForm,

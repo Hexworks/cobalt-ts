@@ -1,0 +1,4 @@
+#!/bin/bash
+
+script/build-all
+script/test-all
