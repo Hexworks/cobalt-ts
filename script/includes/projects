@@ -13,7 +13,9 @@ declare -A project_names
 project_names=(
     ["authorization"]="cobalt-authorization"
     ["core"]="cobalt-core"
-    ["data"]="cobalt-data"
+    ["events"]="cobalt-events"
     ["graphql"]="cobalt-graphql"
     ["http"]="cobalt-http"
+    ["scheduler"]="cobalt-scheduler"
+    ["state"]="cobalt-state"
 )
