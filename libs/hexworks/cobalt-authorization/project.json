@@ -5,7 +5,7 @@
     "projectType": "library",
     "targets": {
         "build": {
-            "executor": "@nrwl/webpack:webpack",
+            "executor": "@nrwl/js:tsc",
             "outputs": ["{options.outputPath}"],
             "options": {
                 "outputPath": "dist/libs/hexworks/cobalt-authorization",

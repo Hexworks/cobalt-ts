@@ -5,21 +5,15 @@
     "projectType": "library",
     "targets": {
         "build": {
-            "executor": "@nrwl/webpack:webpack",
+            "executor": "@nrwl/js:tsc",
             "outputs": ["{options.outputPath}"],
             "options": {
                 "outputPath": "dist/libs/hexworks/cobalt-core",
                 "main": "libs/hexworks/cobalt-core/src/index.ts",
                 "tsConfig": "libs/hexworks/cobalt-core/tsconfig.lib.json",
-                "assets": [
-                    {
-                        "glob": "**/*.md",
-                        "input": ".",
-                        "output": "."
-                    }
-                ],
+                "assets": ["libs/hexworks/cobalt-core/*.md"],
                 "babelUpwardRootMode": true
-            }
+            },
         },
         "publish": {
             "executor": "nx:run-commands",
