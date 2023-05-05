@@ -5,13 +5,13 @@
     "projectType": "library",
     "targets": {
         "build": {
-            "executor": "@nrwl/esbuild:esbuild",
+            "executor": "@nrwl/webpack:webpack",
             "outputs": ["{options.outputPath}"],
             "options": {
                 "outputPath": "dist/libs/hexworks/cobalt-events",
                 "main": "libs/hexworks/cobalt-events/src/index.ts",
                 "tsConfig": "libs/hexworks/cobalt-events/tsconfig.lib.json",
-                "assets": [],
+                "assets": ["libs/hexworks/cobalt-events/*.md"],
                 "babelUpwardRootMode": true
             }
         },

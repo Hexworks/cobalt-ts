@@ -5,13 +5,14 @@
     "projectType": "library",
     "targets": {
         "build": {
-            "executor": "@nrwl/esbuild:esbuild",
+            "executor": "@nrwl/webpack:webpack",
             "outputs": ["{options.outputPath}"],
             "options": {
                 "outputPath": "dist/libs/hexworks/cobalt-scheduler",
                 "main": "libs/hexworks/cobalt-scheduler/src/index.ts",
                 "tsConfig": "libs/hexworks/cobalt-scheduler/tsconfig.lib.json",
-                "assets": ["libs/hexworks/cobalt-scheduler/*.md"]
+                "assets": ["libs/hexworks/cobalt-scheduler/*.md"],
+                "babelUpwardRootMode": true
             }
         },
         "publish": {

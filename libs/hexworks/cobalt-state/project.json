@@ -5,13 +5,14 @@
     "projectType": "library",
     "targets": {
         "build": {
-            "executor": "@nrwl/esbuild:esbuild",
+            "executor": "@nrwl/webpack:webpack",
             "outputs": ["{options.outputPath}"],
             "options": {
                 "outputPath": "dist/libs/hexworks/cobalt-state",
                 "main": "libs/hexworks/cobalt-state/src/index.ts",
                 "tsConfig": "libs/hexworks/cobalt-state/tsconfig.lib.json",
-                "assets": ["libs/hexworks/cobalt-state/*.md"]
+                "assets": ["libs/hexworks/cobalt-state/*.md"],
+                "babelUpwardRootMode": true
             }
         },
         "publish": {

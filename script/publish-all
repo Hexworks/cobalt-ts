@@ -1,0 +1,3 @@
+#!/bin/bash
+
+clear && nx run-many --target=publish --all --skip-nx-cache

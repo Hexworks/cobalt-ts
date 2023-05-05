@@ -5,13 +5,14 @@
     "projectType": "library",
     "targets": {
         "build": {
-            "executor": "@nrwl/esbuild:esbuild",
+            "executor": "@nrwl/webpack:webpack",
             "outputs": ["{options.outputPath}"],
             "options": {
                 "outputPath": "dist/libs/hexworks/cobalt-authorization",
                 "main": "libs/hexworks/cobalt-authorization/src/index.ts",
                 "tsConfig": "libs/hexworks/cobalt-authorization/tsconfig.lib.json",
-                "assets": ["libs/hexworks/cobalt-authorization/*.md"]
+                "assets": ["libs/hexworks/cobalt-authorization/*.md"],
+                "babelUpwardRootMode": true
             }
         },
         "publish": {

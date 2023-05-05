@@ -5,13 +5,14 @@
     "projectType": "library",
     "targets": {
         "build": {
-            "executor": "@nrwl/esbuild:esbuild",
+            "executor": "@nrwl/webpack:webpack",
             "outputs": ["{options.outputPath}"],
             "options": {
                 "outputPath": "dist/libs/hexworks/cobalt-http",
                 "main": "libs/hexworks/cobalt-http/src/index.ts",
                 "tsConfig": "libs/hexworks/cobalt-http/tsconfig.lib.json",
-                "assets": ["libs/hexworks/cobalt-http/*.md"]
+                "assets": ["libs/hexworks/cobalt-http/*.md"],
+                "babelUpwardRootMode": true
             }
         },
         "publish": {
