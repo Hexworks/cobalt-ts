@@ -1,6 +1,6 @@
 {
     "name": "@hexworks/cobalt-scheduler",
-    "version": "2023.5.0-RELEASE",
+    "version": "2023.6.0-RELEASE",
     "description": "Scheduler utility for Cobalt.",
     "homepage": "https://github.com/Hexworks/cobalt-ts",
     "keywords": [
@@ -26,7 +26,8 @@
         "fp-ts": "^2.13.1",
         "immutable": "^4.3.0",
         "luxon": "^3.3.0",
+        "tslog": "^4.7.5",
         "type-fest": "^3.6.0",
-        "@paralleldrive/cuid2": "^2.2.0"
+        "zod": "^3.21.4"
     }
 }

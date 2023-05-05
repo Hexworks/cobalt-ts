@@ -6,7 +6,7 @@ Need info? Read on!
 
 ---
 
-Cobalt is a multiplatform utilities library for Typescript. You can use it with any TypeScript project including
+Cobalt is a utilities library for Typescript. You can use it with any TypeScript project including
 backend, frontend and mobile apps.
 
 **Note that** this project uses functional programming constructs so it is advised to read up on the relevant projects if you're not familiar with them.
@@ -17,11 +17,13 @@ backend, frontend and mobile apps.
 
 This is a list of published packages that you can add to your project. Follow the links if you'd like to learn more about how they work.
 
--   [Authorization](libs/hexworks/cobalt-authorization/README.md): Authorization utilities for Cobalt.
+-   [Authorization](libs/hexworks/cobalt-authorization/README.md): Authorization utilities
 -   [Core](libs/hexworks/cobalt-core/README.md): Core utilities shared by all packages
--   [Data](libs/hexworks/cobalt-data/README.md): Useful data types
--   [GraphQL](libs/hexworks/cobalt-graphql/README.md): GraphQL Client for Cobalt
--   [HTTP](libs/hexworks/cobalt-http/README.md): HTTP Utilities for Cobalt
+-   [Events](libs/hexworks/cobalt-events/README.md): In-memory event bus implementation
+-   [GraphQL](libs/hexworks/cobalt-graphql/README.md): Functional GraphQL Client
+-   [HTTP](libs/hexworks/cobalt-http/README.md): HTTP Utilities
+-   [Scheduler](libs/hexworks/cobalt-scheduler/README.md): Scheduling utility
+-   [State](libs/hexworks/cobalt-state/README.md): Functional and persistent state machine implementation
 
 ## Learning
 
@@ -40,6 +42,7 @@ In case you are not familiar with functional programming and you'd like to learn
 
 ## Development
 
+**TODO**
 
 ### Publishing
 

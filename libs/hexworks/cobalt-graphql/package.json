@@ -1,6 +1,6 @@
 {
     "name": "@hexworks/cobalt-graphql",
-    "version": "2023.5.0-RELEASE",
+    "version": "2023.6.0-RELEASE",
     "description": "GraphQL Client for Cobalt.",
     "homepage": "https://github.com/Hexworks/cobalt-ts",
     "keywords": [
@@ -23,9 +23,9 @@
     ],
     "license": "Apache-2.0",
     "peerDependencies": {
+        "@apollo/client": "^3.7.9",
+        "cross-fetch": "^3.1.5",
         "fp-ts": "^2.13.1",
-        "zod": "^3.20.6",
-        "@apollo/client": "^3.7.8",
-        "cross-fetch": "^3.1.5"
+        "zod": "^3.21.4"
     }
 }
