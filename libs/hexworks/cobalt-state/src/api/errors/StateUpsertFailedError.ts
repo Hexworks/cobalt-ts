@@ -9,7 +9,7 @@ export class StateUpsertFailedError extends ProgramErrorBase<"StateUpsertFailedE
         super({
             __tag: "StateUpsertFailedError",
             cause,
-            message: `Upserting state instance (${stateEntity.stateName}) with key ${stateEntity.key} failed. Cause: ${cause.message}`,
+            message: `Upserting state instance (${stateEntity.stateName}) with key ${stateEntity.id} failed. Cause: ${cause.message}`,
             details: {
                 stateName: stateEntity.stateName,
             },

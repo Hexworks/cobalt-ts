@@ -12,7 +12,8 @@ import {
     AutoDispatcherDeps,
     Dispatcher,
     ErrorReporter,
-    EventWithStateKey,
+    EventWithStateId,
+    StateEntity,
     StateRepository,
     UnknownEventError,
     UnknownStateError,
@@ -70,12 +71,15 @@ export const JOB_STUB = (job: Partial<Job<JsonObject>>): Job<JsonObject> => {
 };
 
 describe("Given a state machine dispatcher", () => {
-    let target: Dispatcher<Context, EventWithStateKey<string>>;
-    let context: Context & AutoDispatcherDeps<string>;
+    let target: Dispatcher<Context, EventWithStateId<string>>;
+    let context: Context &
+        AutoDispatcherDeps<string, unknown, StateEntity<string, unknown>>;
     let eventBus: MockProxy<EventBus>;
     let formDataRepository: MockProxy<FormDataRepository>;
     let scheduler: MockProxy<Scheduler>;
-    let stateInstanceRepository: MockProxy<StateRepository<string>>;
+    let stateInstanceRepository: MockProxy<
+        StateRepository<string, unknown, StateEntity<string, unknown>>
+    >;
     let errorReporter: MockProxy<ErrorReporter>;
 
     beforeEach(() => {
@@ -84,7 +88,10 @@ describe("Given a state machine dispatcher", () => {
         // eslint-disable-next-line @typescript-eslint/ban-ts-comment
         // @ts-ignore
         scheduler = mock<Scheduler>();
-        stateInstanceRepository = mock<StateRepository<string>>();
+        stateInstanceRepository =
+            mock<
+                StateRepository<string, unknown, StateEntity<string, unknown>>
+            >();
         errorReporter = mock<ErrorReporter>();
 
         context = {
@@ -126,21 +133,21 @@ describe("Given a state machine dispatcher", () => {
 
     describe("When constructing a state", () => {
         test("Then only exit actions are executed on it when an event is sent", async () => {
-            const key = "asdfaw3weasdf";
+            const id = "asdfaw3weasdf";
 
             scheduler.cancelByCorrelationId.mockReturnValueOnce(TE.right(true));
 
             scheduler.schedule
                 .calledWith(objectContainsValue("Bump"))
-                .mockReturnValue(TE.right(JOB_STUB({ correlationId: key })));
+                .mockReturnValue(TE.right(JOB_STUB({ correlationId: id })));
 
             const result = await target.dispatch(
                 StateType.Idle,
                 {
                     userId: TEST_USER.id,
-                    key,
+                    id,
                 },
-                new PromptSent(key)
+                new PromptSent(id)
             )(context)();
 
             expect(E.isRight(result)).toBe(true);
@@ -151,14 +158,14 @@ describe("Given a state machine dispatcher", () => {
 
     describe("When dispatching with an existing state and the right data", () => {
         test("Then it fails if the state doesn't accept the given event", async () => {
-            const key = "asdfaw3weasdf";
-            const unacceptableEvent = new FormSubmitted(key, "test data");
+            const id = "asdfaw3weasdf";
+            const unacceptableEvent = new FormSubmitted(id, "test data");
 
             const result = await target.dispatch(
                 StateType.Idle,
                 {
+                    id,
                     userId: TEST_USER.id,
-                    key,
                 },
                 unacceptableEvent
             )(context)();
@@ -174,8 +181,8 @@ describe("Given a state machine dispatcher", () => {
         });
 
         test("Then it succeeds with the default transition when the condition doesn't hold", async () => {
-            const key = "asdf23q3waf";
-            const acceptableEvent = new BumpSent(key);
+            const id = "asdf23q3waf";
+            const acceptableEvent = new BumpSent(id);
 
             formDataRepository.save.mockReturnValueOnce(TE.right(undefined));
             eventBus.publish.mockReturnValueOnce(T.of(undefined));
@@ -184,7 +191,7 @@ describe("Given a state machine dispatcher", () => {
                 StateType.WaitingForInput,
                 {
                     userId: TEST_USER.id,
-                    key,
+                    id,
                     bumpCount: 6,
                 },
                 acceptableEvent
@@ -195,7 +202,7 @@ describe("Given a state machine dispatcher", () => {
                     state: Reporting,
                     data: {
                         userId: "test",
-                        key,
+                        id,
                         bumpCount: 6,
                         data: "no data",
                     },
@@ -204,18 +211,18 @@ describe("Given a state machine dispatcher", () => {
         });
 
         test("Then it succeeds with the transition for which the condition holds", async () => {
-            const key = "asdfaw3weasdf";
-            const acceptableEvent = new BumpSent(key);
+            const id = "asdfaw3weasdf";
+            const acceptableEvent = new BumpSent(id);
 
             scheduler.schedule.mockReturnValueOnce(
-                TE.right(JOB_STUB({ correlationId: key }))
+                TE.right(JOB_STUB({ correlationId: id }))
             );
 
             const result = await target.dispatch(
                 StateType.WaitingForInput,
                 {
                     userId: TEST_USER.id,
-                    key,
+                    id,
                     bumpCount: 2,
                 },
                 acceptableEvent
@@ -226,7 +233,7 @@ describe("Given a state machine dispatcher", () => {
                     state: WaitingForInput,
                     data: {
                         userId: TEST_USER.id,
-                        key,
+                        id,
                         bumpCount: 3,
                     },
                 })
@@ -234,19 +241,19 @@ describe("Given a state machine dispatcher", () => {
         });
 
         test("Then it succeeds when the proper event is sent", async () => {
-            const key = "lkhio32wwef";
-            const acceptableEvent = new TimedOut(key);
+            const id = "lkhio32wwef";
+            const acceptableEvent = new TimedOut(id);
 
             scheduler.cancelByCorrelationId.mockReturnValueOnce(TE.right(true));
             scheduler.schedule.mockReturnValueOnce(
-                TE.right(JOB_STUB({ correlationId: key }))
+                TE.right(JOB_STUB({ correlationId: id }))
             );
 
             const result = await target.dispatch(
                 StateType.FillingForm,
                 {
                     userId: TEST_USER.id,
-                    key,
+                    id,
                 },
                 acceptableEvent
             )(context)();
@@ -257,7 +264,7 @@ describe("Given a state machine dispatcher", () => {
                     data: {
                         userId: TEST_USER.id,
                         bumpCount: 0,
-                        key,
+                        id,
                     },
                 })
             );
@@ -266,8 +273,8 @@ describe("Given a state machine dispatcher", () => {
 
     describe("When dispatching with an existing state and the wrong data", () => {
         test("Then we get the appropriate error", async () => {
-            const key = "fsdg432w44qwas";
-            const acceptableEvent = new BumpSent(key);
+            const id = "fsdg432w44qwas";
+            const acceptableEvent = new BumpSent(id);
 
             const result = await target.dispatch(
                 StateType.WaitingForInput,

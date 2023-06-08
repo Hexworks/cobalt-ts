@@ -17,7 +17,6 @@ import { captor } from "../internal";
 import {
     AutoDispatcher,
     ErrorReporter,
-    EventWithStateKey,
     autoDispatch,
     dispatcher,
 } from "./Dispatcher";
@@ -44,7 +43,9 @@ describe("When using the auto-dispatcher", () => {
     let scheduler: MockProxy<Scheduler>;
     let errorReporter: MockProxy<ErrorReporter>;
     let formDataRepository: MockProxy<FormDataRepository>;
-    let stateRepository: MockProxy<StateRepository<string>>;
+    let stateRepository: MockProxy<
+        StateRepository<string, unknown, StateEntity<string, unknown>>
+    >;
 
     beforeEach(() => {
         idProvider = {
@@ -57,9 +58,17 @@ describe("When using the auto-dispatcher", () => {
         scheduler = mock<Scheduler>();
         errorReporter = mock<ErrorReporter>();
         formDataRepository = mock<FormDataRepository>();
-        stateRepository = mock<StateRepository<string>>();
+        stateRepository =
+            mock<
+                StateRepository<string, unknown, StateEntity<string, unknown>>
+            >();
 
-        target = autoDispatch<Context, EventWithStateKey<string>>(
+        target = autoDispatch<
+            Context,
+            string,
+            unknown,
+            StateEntity<string, unknown>
+        >(
             dispatcher(
                 List.of<AnyStateWithContext<Context>>(
                     Idle,
@@ -78,17 +87,17 @@ describe("When using the auto-dispatcher", () => {
     });
 
     test("Then when an event is sent that can be handled it is handled properly", async () => {
-        const key = "key";
+        const id = "@#$dsfa234fsadf";
         const entity = {
-            key,
+            id,
             stateName: StateType.Idle,
             data: {
-                key,
+                id,
                 userId,
             },
         };
         const job = JOB_STUB({
-            correlationId: key,
+            correlationId: id,
             type: "Timeout",
             name: `Timeout user ${userId}`,
             data: { userId },
@@ -97,43 +106,43 @@ describe("When using the auto-dispatcher", () => {
 
         scheduler.cancelByCorrelationId.mockReturnValue(TE.right(true));
         scheduler.schedule.mockReturnValue(TE.right(job));
-        stateRepository.findByKey
-            .calledWith(key)
+        stateRepository.findById
+            .calledWith(id)
             .mockReturnValue(TE.right(entity));
         stateRepository.upsert
             .calledWith(newStateCaptor)
             .mockReturnValue(TE.right(newStateCaptor.value));
         errorReporter.report.mockReturnValue(T.of(undefined));
 
-        await eventBus.publish(new UserInitiatedForm(key))();
+        await eventBus.publish(new UserInitiatedForm(id))();
 
-        expect(stateRepository.findByKey).toHaveBeenCalledWith(key);
-        expect(scheduler.schedule).toHaveBeenCalledTimes(1);
+        expect(stateRepository.findById).toHaveBeenCalledWith(id);
         expect(errorReporter.report).toHaveBeenCalledTimes(0);
+        expect(scheduler.schedule).toHaveBeenCalledTimes(1);
         expect(newStateCaptor.value).toEqual({
-            key,
+            id,
             stateName: StateType.FillingForm,
             data: {
-                key,
+                id,
                 userId,
             },
         });
     });
 
     test("Then when an event is sent that doesn't have a corresponding state no state change occurs", async () => {
-        const key = "key";
+        const id = ";lj90afuw9320";
 
-        const expectedError = new StateInstanceNotFoundError(key);
-        const expectedEvent = new UserInitiatedForm(key);
+        const expectedError = new StateInstanceNotFoundError(id);
+        const expectedEvent = new UserInitiatedForm(id);
 
-        stateRepository.findByKey
-            .calledWith(key)
+        stateRepository.findById
+            .calledWith(id)
             .mockReturnValue(TE.left(expectedError));
         errorReporter.report.mockReturnValue(T.of(undefined));
 
         await eventBus.publish(expectedEvent)();
 
-        expect(stateRepository.findByKey).toHaveBeenCalledWith(key);
+        expect(stateRepository.findById).toHaveBeenCalledWith(id);
         expect(errorReporter.report).toHaveBeenCalledWith(
             expectedError,
             expectedEvent
@@ -145,11 +154,11 @@ describe("When using the auto-dispatcher", () => {
 
     test("Then after the dispatcher is stopped no event should be handled", async () => {
         target.stop();
-        const key = "key";
+        const id = "sadf23rq23fsad";
 
-        await eventBus.publish(new UserInitiatedForm(key))();
+        await eventBus.publish(new UserInitiatedForm(id))();
 
-        expect(stateRepository.findByKey).toHaveBeenCalledTimes(0);
+        expect(stateRepository.findById).toHaveBeenCalledTimes(0);
         expect(scheduler.schedule).toHaveBeenCalledTimes(0);
         expect(errorReporter.report).toHaveBeenCalledTimes(0);
     });

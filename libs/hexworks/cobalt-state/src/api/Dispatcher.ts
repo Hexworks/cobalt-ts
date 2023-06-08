@@ -10,6 +10,7 @@ import {
     AnyStateWithContext,
     DispatcherError,
     State,
+    StateEntity,
     StateInstance,
     StateRepository,
     ThisIsABugError,
@@ -23,9 +24,9 @@ export type ErrorReporter = {
     report: (error: ProgramError, event: Event<string>) => T.Task<void>;
 };
 
-export type AutoDispatcherDeps<I> = {
+export type AutoDispatcherDeps<I, D, E extends StateEntity<I, D>> = {
     eventBus: EventBus;
-    stateRepository: StateRepository<I>;
+    stateRepository: StateRepository<I, D, E>;
     errorReporter: ErrorReporter;
 };
 
@@ -47,50 +48,52 @@ export type Dispatcher<C, E extends Event<string> = Event<string>> = {
     >;
 };
 
-export type EventWithStateKey<K> = Event<string> & {
-    stateKey: K;
+export type EventWithStateId<I> = Event<string> & {
+    id: I;
 };
 
-type GetEventTypeWithKey<T> = T extends EventWithStateKey<infer K> ? K : never;
-
-export const autoDispatch = <
-    C,
-    E extends EventWithStateKey<K>,
-    K = GetEventTypeWithKey<E>
->(
-    dispatcher: Dispatcher<C, E>
-): R.Reader<C & AutoDispatcherDeps<K>, AutoDispatcher> => {
+export const autoDispatch = <C, I, D, E extends StateEntity<I, D>>(
+    dispatcher: Dispatcher<C, EventWithStateId<I>>
+): R.Reader<C & AutoDispatcherDeps<I, D, E>, AutoDispatcher> => {
     const supportedEventTypes = dispatcher.supportedEventTypes;
     return pipe(
-        R.ask<C & AutoDispatcherDeps<K>>(),
+        R.ask<C & AutoDispatcherDeps<I, D, E>>(),
         R.map((ctx) => {
             const { eventBus, stateRepository, errorReporter } = ctx;
             return supportedEventTypes.map((eventType) =>
-                eventBus.subscribe<string, E>(eventType, (event) => {
-                    const key = event.stateKey;
-                    return pipe(
-                        stateRepository.findByKey(key),
-                        TE.chainW((entity) => {
-                            const { stateName, data } = entity;
-                            return dispatcher.dispatch(
-                                stateName,
-                                data,
-                                event
-                            )(ctx);
-                        }),
-                        TE.chainW(({ state, data }) => {
-                            return stateRepository.upsert({
-                                key: key,
-                                stateName: state.name,
-                                data,
-                            });
-                        }),
-                        TE.getOrElseW((e) => errorReporter.report(e, event)),
-                        T.map(() => ({
-                            subscription: SubscriptionOption.Keep,
-                        }))
-                    );
-                })
+                eventBus.subscribe<string, EventWithStateId<I>>(
+                    eventType,
+                    (event) => {
+                        const { id } = event;
+                        return pipe(
+                            TE.Do,
+                            TE.bind("entity", () => {
+                                return stateRepository.findById(id);
+                            }),
+                            TE.bindW("newState", ({ entity }) => {
+                                const { stateName, data } = entity;
+                                return dispatcher.dispatch(
+                                    stateName,
+                                    data,
+                                    event
+                                )(ctx);
+                            }),
+                            TE.chainW(({ entity, newState }) => {
+                                return stateRepository.upsert({
+                                    ...entity,
+                                    stateName: newState.state.name,
+                                    data: newState.data,
+                                });
+                            }),
+                            TE.getOrElseW((e) => {
+                                return errorReporter.report(e, event);
+                            }),
+                            T.map(() => ({
+                                subscription: SubscriptionOption.Keep,
+                            }))
+                        );
+                    }
+                )
             );
         }),
         R.map((subscriptions) => {

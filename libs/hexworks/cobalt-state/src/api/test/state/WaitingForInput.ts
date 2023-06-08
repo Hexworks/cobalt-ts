@@ -11,13 +11,13 @@ export const WaitingForInput: State<
 > = state<WaitingForInputData, Context, "WaitingForInput">("WaitingForInput")
     .withSchema(WaitingForInputData)
     .onEntry(
-        executeWithContext(({ userId, key }, { scheduler }) =>
+        executeWithContext(({ userId, id }, { scheduler }) =>
             scheduler.schedule({
                 type: "Bump",
                 data: { userId: userId },
                 name: `Bump user ${userId}`,
                 scheduledAt: new Date(), // TODO: when?
-                correlationId: key,
+                correlationId: id,
             })
         )
     )

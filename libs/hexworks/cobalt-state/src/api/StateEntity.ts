@@ -1,5 +1,5 @@
-export type StateEntity<K, D> = {
-    key: K;
+export type StateEntity<I, D> = {
+    id: I;
     stateName: string;
     data: D;
 };
