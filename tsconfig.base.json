@@ -14,7 +14,7 @@
         "isolatedModules": true,
         "jsx": "react",
         "lib": ["dom", "dom.iterable", "esnext"],
-        "module": "ESNext",
+        "module": "CommonJS",
         "moduleResolution": "node",
         "noFallthroughCasesInSwitch": true,
         "noImplicitReturns": true,
