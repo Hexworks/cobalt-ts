@@ -1,5 +1,8 @@
-import { IdProvider } from "@hexworks/cobalt-core";
-import { ProgramError, ZodValidationError } from "@hexworks/cobalt-core";
+import {
+    IdProvider,
+    ProgramError,
+    ZodValidationError,
+} from "@hexworks/cobalt-core";
 import * as TE from "fp-ts/TaskEither";
 import { Duration } from "luxon";
 import { JsonObject } from "type-fest";
@@ -18,12 +21,12 @@ import {
 } from ".";
 import { DefaultScheduler } from "../internal";
 
-export type SchedulingError<T extends JsonObject> =
+export type SchedulingError =
     | SchedulerNotRunningError
     | JobStorageError
     | JobAlreadyExistsError
     | NoHandlerFoundError
-    | ZodValidationError<T>;
+    | ZodValidationError;
 
 export const DEFAULT_JOB_CHECK_INTERVAL = Duration.fromObject({
     seconds: 5,
@@ -42,7 +45,12 @@ export type Scheduler = {
      */
     schedule: <T extends JsonObject>(
         job: JobDescriptor<T>
-    ) => TE.TaskEither<SchedulingError<T>, Job<T>>;
+    ) => TE.TaskEither<SchedulingError, Job<T>>;
+    /**
+     * Adds a new handler to this scheduler. This will overwrite any existing handler
+     * for the given job type.
+     */
+    addHandler: <T extends JsonObject>(jobHandler: JobHandler<T>) => void;
     /**
      * Cancels the job with the given name.
      * @returns `true` if there was a cancellation, `false` if not

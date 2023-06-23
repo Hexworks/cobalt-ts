@@ -4,12 +4,10 @@ import { ProgramErrorBase } from ".";
 /**
  * Use this error to wrap validation errors into a `ProgramError`.
  */
-export class ZodValidationError<
-    T
-> extends ProgramErrorBase<"ZodValidationError"> {
-    public errorReport: ZodFormattedError<T>;
+export class ZodValidationError extends ProgramErrorBase<"ZodValidationError"> {
+    public errorReport: ZodFormattedError<unknown>;
 
-    constructor(public error: ZodError<T>) {
+    constructor(public error: ZodError<unknown>) {
         super({
             __tag: "ZodValidationError",
             message: error.message,

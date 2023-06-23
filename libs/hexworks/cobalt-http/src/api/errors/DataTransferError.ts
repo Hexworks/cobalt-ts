@@ -6,7 +6,7 @@ import { UnknownDataTransferError } from "./UnknownDataTransferError";
 
 export type DataTransferError =
     | HTTPDataTransferError
-    | ZodValidationError<unknown>
+    | ZodValidationError
     | HTTPRequestError
     | RemoteDataTransferError
     | UnknownDataTransferError;

@@ -1,4 +1,4 @@
-import { ZodValidationError } from "@hexworks/cobalt-core";
+import { IdProvider, ZodValidationError } from "@hexworks/cobalt-core";
 import { EventBus } from "@hexworks/cobalt-events";
 import { Job, JobState, Scheduler } from "@hexworks/cobalt-scheduler";
 import * as T from "fp-ts/Task";
@@ -7,17 +7,20 @@ import * as TE from "fp-ts/lib/TaskEither";
 import { List } from "immutable";
 import { MockProxy, mock, objectContainsValue } from "jest-mock-extended";
 import { JsonObject } from "type-fest";
+import { v4 as generateId } from "uuid";
 import {
     AnyStateWithContext,
     AutoDispatcherDeps,
-    Dispatcher,
     ErrorReporter,
     EventWithStateId,
     StateEntity,
+    StateInstance,
+    StateMachine,
     StateRepository,
     UnknownEventError,
     UnknownStateError,
-    dispatcher,
+    newStateMachine,
+    state,
 } from ".";
 import { StateTransitionError } from "./errors/StateTransitionError";
 import {
@@ -34,6 +37,7 @@ import {
     TimedOut,
     User,
     WaitingForInput,
+    WaitingForInputData,
 } from "./test";
 
 const TEST_USER: User = {
@@ -70,38 +74,48 @@ export const JOB_STUB = (job: Partial<Job<JsonObject>>): Job<JsonObject> => {
     };
 };
 
-describe("Given a state machine dispatcher", () => {
-    let target: Dispatcher<Context, EventWithStateId<string>>;
-    let context: Context &
-        AutoDispatcherDeps<string, unknown, StateEntity<string, unknown>>;
+const NonExistentState = state<void, Context>("NonExistentState").build();
+
+describe("Given a state machine StateMachine", () => {
+    let target: StateMachine<Context, EventWithStateId<string>>;
+
+    let idProvider: IdProvider<string>;
+    let context: Context & AutoDispatcherDeps<Context>;
     let eventBus: MockProxy<EventBus>;
     let formDataRepository: MockProxy<FormDataRepository>;
     let scheduler: MockProxy<Scheduler>;
-    let stateInstanceRepository: MockProxy<
-        StateRepository<string, unknown, StateEntity<string, unknown>>
-    >;
+    let stateRepository: MockProxy<StateRepository>;
     let errorReporter: MockProxy<ErrorReporter>;
+    let mapInstance: <D, N extends string>(
+        instance: StateInstance<D, Context, N>
+    ) => StateEntity<string, D, unknown>;
 
     beforeEach(() => {
+        idProvider = {
+            generateId,
+        };
         eventBus = mock<EventBus>();
         formDataRepository = mock<FormDataRepository>();
         // eslint-disable-next-line @typescript-eslint/ban-ts-comment
         // @ts-ignore
         scheduler = mock<Scheduler>();
-        stateInstanceRepository =
-            mock<
-                StateRepository<string, unknown, StateEntity<string, unknown>>
-            >();
+        stateRepository = mock<StateRepository>();
         errorReporter = mock<ErrorReporter>();
+        mapInstance = (instance) => ({
+            id: idProvider.generateId(),
+            stateName: instance.state.name,
+            data: instance.data,
+        });
 
         context = {
             eventBus,
             formDataRepository,
             scheduler,
-            stateRepository: stateInstanceRepository,
+            stateRepository,
             errorReporter,
+            mapInstance,
         };
-        target = dispatcher(
+        target = newStateMachine(
             List.of<AnyStateWithContext<Context>>(
                 Idle,
                 FillingForm,
@@ -113,12 +127,10 @@ describe("Given a state machine dispatcher", () => {
 
     describe("When dispatching an invalid state", () => {
         test("Then it fails", async () => {
-            const nonExistentState = "hello";
             const key = "saf32qr@#Q$@#";
 
             const result = await target.dispatch(
-                nonExistentState,
-                {},
+                { state: NonExistentState, data: undefined },
                 new BumpSent(key)
             )(context)();
 
@@ -127,7 +139,9 @@ describe("Given a state machine dispatcher", () => {
             }
 
             expect(result.left).toBeInstanceOf(UnknownStateError);
-            expect(result.left.details?.["stateName"]).toBe(nonExistentState);
+            expect(result.left.details?.["stateName"]).toBe(
+                NonExistentState.name
+            );
         });
     });
 
@@ -142,10 +156,12 @@ describe("Given a state machine dispatcher", () => {
                 .mockReturnValue(TE.right(JOB_STUB({ correlationId: id })));
 
             const result = await target.dispatch(
-                StateType.Idle,
                 {
-                    userId: TEST_USER.id,
-                    id,
+                    state: Idle,
+                    data: {
+                        userId: TEST_USER.id,
+                        id,
+                    },
                 },
                 new PromptSent(id)
             )(context)();
@@ -162,10 +178,12 @@ describe("Given a state machine dispatcher", () => {
             const unacceptableEvent = new FormSubmitted(id, "test data");
 
             const result = await target.dispatch(
-                StateType.Idle,
                 {
-                    id,
-                    userId: TEST_USER.id,
+                    state: Idle,
+                    data: {
+                        id,
+                        userId: TEST_USER.id,
+                    },
                 },
                 unacceptableEvent
             )(context)();
@@ -188,11 +206,13 @@ describe("Given a state machine dispatcher", () => {
             eventBus.publish.mockReturnValueOnce(T.of(undefined));
 
             const result = await target.dispatch(
-                StateType.WaitingForInput,
                 {
-                    userId: TEST_USER.id,
-                    id,
-                    bumpCount: 6,
+                    state: WaitingForInput,
+                    data: {
+                        userId: TEST_USER.id,
+                        id,
+                        bumpCount: 6,
+                    },
                 },
                 acceptableEvent
             )(context)();
@@ -219,11 +239,13 @@ describe("Given a state machine dispatcher", () => {
             );
 
             const result = await target.dispatch(
-                StateType.WaitingForInput,
                 {
-                    userId: TEST_USER.id,
-                    id,
-                    bumpCount: 2,
+                    state: WaitingForInput,
+                    data: {
+                        userId: TEST_USER.id,
+                        id,
+                        bumpCount: 2,
+                    },
                 },
                 acceptableEvent
             )(context)();
@@ -250,10 +272,12 @@ describe("Given a state machine dispatcher", () => {
             );
 
             const result = await target.dispatch(
-                StateType.FillingForm,
                 {
-                    userId: TEST_USER.id,
-                    id,
+                    state: FillingForm,
+                    data: {
+                        userId: TEST_USER.id,
+                        id,
+                    },
                 },
                 acceptableEvent
             )(context)();
@@ -277,9 +301,11 @@ describe("Given a state machine dispatcher", () => {
             const acceptableEvent = new BumpSent(id);
 
             const result = await target.dispatch(
-                StateType.WaitingForInput,
                 {
-                    retard: true,
+                    state: WaitingForInput,
+                    data: {
+                        retard: true,
+                    } as unknown as WaitingForInputData,
                 },
                 acceptableEvent
             )(context)();

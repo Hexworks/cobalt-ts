@@ -8,8 +8,8 @@ import { ZodValidationError } from "../errors/ZodValidationError";
  * Wraps the output of {@link ZodType.safeParse} into an {@link Either}.
  */
 export const safeParse =
-    <T>(schema: z.ZodType<T>) =>
-    (input: unknown): E.Either<ZodValidationError<T>, T> => {
+    <T>(schema: z.Schema<T, z.ZodTypeDef, unknown>) =>
+    (input: unknown): E.Either<ZodValidationError, T> => {
         const result = schema.safeParse(input);
         if (result.success) {
             return E.right(result.data);
@@ -23,7 +23,7 @@ export const safeParse =
  */
 export const safeParseAsync =
     <T>(schema: z.ZodType<T>) =>
-    (input: unknown): TE.TaskEither<ZodValidationError<T>, T> => {
+    (input: unknown): TE.TaskEither<ZodValidationError, T> => {
         return pipe(
             TE.fromTask(() => schema.safeParseAsync(input)),
             TE.chain((result) => {

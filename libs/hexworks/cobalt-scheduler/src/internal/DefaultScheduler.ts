@@ -1,5 +1,10 @@
-import { IdProvider, createLogger } from "@hexworks/cobalt-core";
-import { ProgramError, UnknownError, toJson } from "@hexworks/cobalt-core";
+import {
+    IdProvider,
+    ProgramError,
+    UnknownError,
+    createLogger,
+    toJson,
+} from "@hexworks/cobalt-core";
 import * as TE from "fp-ts/TaskEither";
 import { pipe } from "fp-ts/lib/function";
 import { Duration } from "luxon";
@@ -59,7 +64,7 @@ export class DefaultScheduler implements Scheduler {
 
     public schedule<T extends JsonObject>(
         job: JobDescriptor<T>
-    ): TE.TaskEither<SchedulingError<T>, Job<T>> {
+    ): TE.TaskEither<SchedulingError, Job<T>> {
         if (this.state !== "running") {
             return TE.left(new SchedulerNotRunningError());
         } else {
@@ -76,6 +81,10 @@ export class DefaultScheduler implements Scheduler {
                 })
             );
         }
+    }
+
+    public addHandler<T extends JsonObject>(jobHandler: JobHandler<T>) {
+        this.handlers.set(jobHandler.type, jobHandler as AnyJobHandler);
     }
 
     cancelByName(

@@ -55,20 +55,23 @@ export type State<D, C, N extends string> = {
 /**
  * Builder function that can be used to create a new state.
  * @param name the unique name of the state.
+ * @param D The type of the data that is stored in the state.
+ * @param C The type of the context that is passed to the state machine.
+ * @param N The name of the state.
  * @returns
  */
-export const state = <S = void, C = never, N extends string = string>(
+export const state = <D = void, C = never, N extends string = string>(
     name: N
-): StateBuilder<S, C, N> => {
+): StateBuilder<D, C, N> => {
     return new DefaultStateBuilder(name);
 };
 
 /**
  * Returns a new {@link StateInstance} with the given data.
  */
-export const newState = <S = void, C = never, N extends string = string>(
-    state: State<S, C, N>,
-    data: S
+export const newState = <D = void, C = never, N extends string = string>(
+    state: State<D, C, N>,
+    data: D
 ) =>
     RTE.right({
         state,

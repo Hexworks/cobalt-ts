@@ -1,5 +1,5 @@
 import { ProgramError, ProgramErrorBase } from "@hexworks/cobalt-core";
-import { StateEntity } from "../StateEntity";
+import { StateEntity } from "../StateRepository";
 
 export class StateUpsertFailedError extends ProgramErrorBase<"StateUpsertFailedError"> {
     constructor(

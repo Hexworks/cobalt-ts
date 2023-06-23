@@ -1,6 +1,6 @@
 {
     "name": "@hexworks/cobalt-scheduler",
-    "version": "2023.10.0-RELEASE",
+    "version": "2023.12.0-RELEASE",
     "description": "Scheduler utility for Cobalt.",
     "homepage": "https://github.com/Hexworks/cobalt-ts",
     "keywords": [

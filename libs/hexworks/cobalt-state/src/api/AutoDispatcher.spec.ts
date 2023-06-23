@@ -10,6 +10,7 @@ import { v4 as generateId } from "uuid";
 import {
     AnyStateWithContext,
     StateEntity,
+    StateInstance,
     StateInstanceNotFoundError,
     StateRepository,
 } from "..";
@@ -18,9 +19,9 @@ import {
     AutoDispatcher,
     ErrorReporter,
     autoDispatch,
-    dispatcher,
-} from "./Dispatcher";
-import { JOB_STUB } from "./Dispatcher.spec";
+    newStateMachine,
+} from "./StateMachine";
+import { JOB_STUB } from "./StateMachine.spec";
 import {
     Context,
     FillingForm,
@@ -35,41 +36,36 @@ import {
 const userId = generateId();
 
 describe("When using the auto-dispatcher", () => {
-    let target: AutoDispatcher;
+    let target: AutoDispatcher<Context>;
 
-    let idProvider: IdProvider<string>;
+    let idProvider: MockProxy<IdProvider<string>>;
     let eventBus: EventBus;
 
     let scheduler: MockProxy<Scheduler>;
     let errorReporter: MockProxy<ErrorReporter>;
     let formDataRepository: MockProxy<FormDataRepository>;
-    let stateRepository: MockProxy<
-        StateRepository<string, unknown, StateEntity<string, unknown>>
-    >;
+    let stateRepository: MockProxy<StateRepository>;
+    let mapInstance: <D, N extends string>(
+        instance: StateInstance<D, Context, N>
+    ) => StateEntity<string, D, unknown>;
 
     beforeEach(() => {
-        idProvider = {
-            generateId,
-        };
+        idProvider = mock<IdProvider<string>>();
+
         eventBus = EventBus({ idProvider });
 
-        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-        // @ts-ignore
         scheduler = mock<Scheduler>();
         errorReporter = mock<ErrorReporter>();
         formDataRepository = mock<FormDataRepository>();
-        stateRepository =
-            mock<
-                StateRepository<string, unknown, StateEntity<string, unknown>>
-            >();
+        stateRepository = mock<StateRepository>();
+        mapInstance = (instance) => ({
+            id: idProvider.generateId(),
+            stateName: instance.state.name,
+            data: instance.data,
+        });
 
-        target = autoDispatch<
-            Context,
-            string,
-            unknown,
-            StateEntity<string, unknown>
-        >(
-            dispatcher(
+        target = autoDispatch<Context>(
+            newStateMachine(
                 List.of<AnyStateWithContext<Context>>(
                     Idle,
                     FillingForm,
@@ -83,6 +79,7 @@ describe("When using the auto-dispatcher", () => {
             errorReporter,
             formDataRepository,
             stateRepository,
+            mapInstance,
         });
     });
 
@@ -161,5 +158,45 @@ describe("When using the auto-dispatcher", () => {
         expect(stateRepository.findById).toHaveBeenCalledTimes(0);
         expect(scheduler.schedule).toHaveBeenCalledTimes(0);
         expect(errorReporter.report).toHaveBeenCalledTimes(0);
+    });
+
+    test("Then when a new state is created it is saved properly, and entry actions are executed", async () => {
+        const id = "@#$dsfa234fsadf";
+
+        const data = {
+            id,
+            userId,
+        };
+        const instance = {
+            state: Idle,
+            data,
+        };
+        const job = JOB_STUB({
+            correlationId: id,
+            type: "Prompt",
+            name: `Prompt user ${userId}`,
+            data: { userId },
+        });
+        const newStateCaptor = captor<StateEntity<string, unknown>>();
+
+        idProvider.generateId.mockReturnValue(id);
+        scheduler.schedule.mockReturnValue(TE.right(job));
+        stateRepository.upsert
+            .calledWith(newStateCaptor)
+            .mockReturnValue(TE.right(newStateCaptor.value));
+        errorReporter.report.mockReturnValue(T.of(undefined));
+
+        await target.create(instance)();
+
+        expect(errorReporter.report).toHaveBeenCalledTimes(0);
+        expect(scheduler.schedule).toHaveBeenCalledTimes(1);
+        expect(newStateCaptor.value).toEqual({
+            id,
+            stateName: StateType.Idle,
+            data: {
+                id,
+                userId,
+            },
+        });
     });
 });
