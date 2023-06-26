@@ -99,7 +99,7 @@ describe("When using the auto-dispatcher", () => {
             name: `Timeout user ${userId}`,
             data: { userId },
         });
-        const newStateCaptor = captor<StateEntity<string, unknown>>();
+        const newStateCaptor = captor<StateEntity<string, unknown, unknown>>();
 
         scheduler.cancelByCorrelationId.mockReturnValue(TE.right(true));
         scheduler.schedule.mockReturnValue(TE.right(job));
@@ -177,7 +177,7 @@ describe("When using the auto-dispatcher", () => {
             name: `Prompt user ${userId}`,
             data: { userId },
         });
-        const newStateCaptor = captor<StateEntity<string, unknown>>();
+        const newStateCaptor = captor<StateEntity<string, unknown, unknown>>();
 
         idProvider.generateId.mockReturnValue(id);
         scheduler.schedule.mockReturnValue(TE.right(job));

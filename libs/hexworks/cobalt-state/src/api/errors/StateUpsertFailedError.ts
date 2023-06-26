@@ -4,7 +4,7 @@ import { StateEntity } from "../StateRepository";
 export class StateUpsertFailedError extends ProgramErrorBase<"StateUpsertFailedError"> {
     constructor(
         cause: ProgramError,
-        public stateEntity: StateEntity<unknown, unknown>
+        public stateEntity: StateEntity<unknown, unknown, unknown>
     ) {
         super({
             __tag: "StateUpsertFailedError",

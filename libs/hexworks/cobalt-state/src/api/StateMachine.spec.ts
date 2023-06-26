@@ -33,7 +33,6 @@ import {
     Idle,
     PromptSent,
     Reporting,
-    StateType,
     TimedOut,
     User,
     WaitingForInput,
