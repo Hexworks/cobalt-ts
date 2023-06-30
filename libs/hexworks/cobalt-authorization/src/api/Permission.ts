@@ -1,6 +1,8 @@
+import { GetIdType } from "./Context";
 import { Filter } from "./Filter";
 import { Operation, OperationDependencies } from "./Operation";
 import { Policy } from "./Policy";
+import { User } from "./User";
 
 /**
  * A `Permission` determines the constraints of executing an {@link Operation}.
@@ -14,15 +16,21 @@ import { Policy } from "./Policy";
  * @param filters are evaluated in order, and they may modify the result of
  *                the `operation`.
  */
-export interface Permission<I, O, D> {
+export interface Permission<
+    INPUT,
+    DEPENDENCIES,
+    RESULT,
+    USER extends User<ID>,
+    ID = GetIdType<USER>
+> {
     name: string;
     operationName: string;
-    policies: Policy<I, D>[];
-    filters?: Filter<O, D>[];
+    policies: Policy<INPUT, DEPENDENCIES, USER, ID>[];
+    filters?: Filter<DEPENDENCIES, RESULT, USER, ID>[];
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type AnyPermission = Permission<any, any, any>;
+export type AnyPermission = Permission<any, any, any, any>;
 
 /**
  * Creates a curried function that can be used to find the applicable
@@ -39,10 +47,18 @@ export type AnyPermission = Permission<any, any, any>;
  * ```
  */
 export const getPermissionFilterFor =
-    <I, O, D extends OperationDependencies = OperationDependencies>(
-        operation: Operation<I, O, D>
+    <
+        INPUT,
+        DEPENDENCIES extends OperationDependencies,
+        RESULT,
+        USER extends User<ID>,
+        ID = GetIdType<USER>
+    >(
+        operation: Operation<INPUT, DEPENDENCIES, RESULT>
     ) =>
-    (permissions: AnyPermission[]): Permission<I, O, D>[] => {
+    (
+        permissions: AnyPermission[]
+    ): Permission<INPUT, DEPENDENCIES, RESULT, USER, ID>[] => {
         return permissions.filter(
             (permission) => permission.operationName === operation.name
         );

@@ -25,16 +25,27 @@ import {
     Scheduler,
     SchedulerNotRunningError,
     SchedulerStartupError,
-    Success,
     Timer,
     createJobHandler,
-} from ".";
+} from "../api";
 
-const jobCheckInterval = Duration.fromMillis(10);
+const jobCheckIntervalMs = 10;
+
+const jobCheckInterval10Ms = Duration.fromMillis(jobCheckIntervalMs);
 
 const NumbersToAdd = z.object({
     first: z.number(),
     second: z.number(),
+});
+
+export type Success<R> = JobResult & {
+    type: "success";
+    result: R;
+};
+
+export const Success = <R>(result: R): Success<R> => ({
+    type: "success",
+    result,
 });
 
 type NumbersToAdd = z.infer<typeof NumbersToAdd>;
@@ -44,16 +55,22 @@ let NUMBER_ADDER_EXECUTION_RESULTS: JobExecutionResult<
     JobResult
 >[] = [];
 
-let NUMBER_ADDER_EXECUTION_ERRORS: JobExecutionError<NumbersToAdd>[] = [];
+let NUMBER_ADDER_EXECUTION_ERRORS: JobExecutionError<
+    NumbersToAdd,
+    JobResult
+>[] = [];
 
-const REPORT_RESULT_STRATEGY: OnResultStrategy<NumbersToAdd, JobResult> = {
-    canHandle: function (result: JobResult): result is JobResult {
+const REPORT_RESULT_STRATEGY: OnResultStrategy<
+    NumbersToAdd,
+    Success<number>
+> = {
+    canHandle: function (result: JobResult): result is Success<number> {
         return true;
     },
     onResult: function (
         context: JobExecutionResult<
             { first: number; second: number },
-            JobResult
+            Success<number>
         >
     ): TE.TaskEither<ProgramError, void> {
         NUMBER_ADDER_EXECUTION_RESULTS.push(context);
@@ -142,12 +159,64 @@ describe("Given a Scheduler", () => {
             jobRepository,
             handlers,
             timer,
-            jobCheckInterval,
             idProvider,
+            jobCheckInterval: jobCheckInterval10Ms,
+        });
+    });
+
+    describe("When it is started with a real timer", () => {
+        let currId = 1;
+
+        beforeEach(() => {
+            target = Scheduler({
+                jobRepository,
+                handlers,
+                timer: Timer(),
+                idProvider: {
+                    generateId: () => `${currId++}`,
+                },
+                jobCheckInterval: jobCheckInterval10Ms,
+            });
+        });
+
+        test("Then it should start properly", async () => {
+            jobRepository.findNextJobs.mockReturnValue(
+                T.of(List.of(SAVED_ADD_1_AND_2_JOB))
+            );
+            jobRepository.upsert.mockReturnValue(
+                TE.right(SAVED_ADD_1_AND_2_JOB)
+            );
+
+            const result = await target.start()();
+
+            expect(result).toEqual(E.right(undefined));
+        });
+
+        test("Then it should run the specified jobs periodically", async () => {
+            jobRepository.findNextJobs.mockReturnValue(
+                T.of(List.of(SAVED_ADD_1_AND_2_JOB))
+            );
+            jobRepository.upsert.mockReturnValue(
+                TE.right(SAVED_ADD_1_AND_2_JOB)
+            );
+
+            await target.start()();
+
+            await sleep(jobCheckIntervalMs * 2)();
+
+            expect(NUMBER_ADDER_EXECUTION_RESULTS.length).toBeGreaterThan(1);
         });
     });
 
     describe("When it is started", () => {
+        test("Then the job check interval is right", () => {
+            expect(
+                Duration.fromObject({
+                    seconds: 5,
+                }).as("milliseconds")
+            ).toBe(5000);
+        });
+
         test("Then it should check for jobs according to the config", async () => {
             jobRepository.findNextJobs.mockReturnValue(T.of(List.of()));
 
@@ -223,9 +292,9 @@ describe("Given a Scheduler", () => {
             handlers.set("NumberAdder", NumberAdder(false));
             jobRepository.findNextJobs.mockReturnValue(T.of(List.of()));
             idProvider.generateId.mockReturnValue(CORRELATION_ID);
-            jobRepository.upsert
-                .calledWith(any())
-                .mockReturnValue(TE.right(SAVED_ADD_1_AND_2_JOB));
+            jobRepository.upsert.mockReturnValue(
+                TE.right(SAVED_ADD_1_AND_2_JOB)
+            );
 
             await target.start()();
 

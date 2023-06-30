@@ -32,6 +32,7 @@ import {
     UserInitiatedForm,
     WaitingForInput,
 } from "./test";
+import { JsonObject } from "type-fest";
 
 const userId = generateId();
 
@@ -99,7 +100,8 @@ describe("When using the auto-dispatcher", () => {
             name: `Timeout user ${userId}`,
             data: { userId },
         });
-        const newStateCaptor = captor<StateEntity<string, unknown, unknown>>();
+        const newStateCaptor =
+            captor<StateEntity<string, JsonObject, unknown>>();
 
         scheduler.cancelByCorrelationId.mockReturnValue(TE.right(true));
         scheduler.schedule.mockReturnValue(TE.right(job));
@@ -177,7 +179,8 @@ describe("When using the auto-dispatcher", () => {
             name: `Prompt user ${userId}`,
             data: { userId },
         });
-        const newStateCaptor = captor<StateEntity<string, unknown, unknown>>();
+        const newStateCaptor =
+            captor<StateEntity<string, JsonObject, unknown>>();
 
         idProvider.generateId.mockReturnValue(id);
         scheduler.schedule.mockReturnValue(TE.right(job));
@@ -186,7 +189,7 @@ describe("When using the auto-dispatcher", () => {
             .mockReturnValue(TE.right(newStateCaptor.value));
         errorReporter.report.mockReturnValue(T.of(undefined));
 
-        await target.create(instance)();
+        await target.create(instance, {})();
 
         expect(errorReporter.report).toHaveBeenCalledTimes(0);
         expect(scheduler.schedule).toHaveBeenCalledTimes(1);

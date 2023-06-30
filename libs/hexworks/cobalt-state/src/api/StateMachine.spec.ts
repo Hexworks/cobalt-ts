@@ -86,7 +86,8 @@ describe("Given a state machine StateMachine", () => {
     let stateRepository: MockProxy<StateRepository>;
     let errorReporter: MockProxy<ErrorReporter>;
     let mapInstance: <D, N extends string>(
-        instance: StateInstance<D, Context, N>
+        instance: StateInstance<D, Context, N>,
+        extras: unknown
     ) => StateEntity<string, D, unknown>;
 
     beforeEach(() => {

@@ -3,8 +3,10 @@ import {
     ProgramError,
     UnknownError,
     createLogger,
+    extractMessage,
     toJson,
 } from "@hexworks/cobalt-core";
+import * as E from "fp-ts/Either";
 import * as TE from "fp-ts/TaskEither";
 import { pipe } from "fp-ts/lib/function";
 import { Duration } from "luxon";
@@ -155,7 +157,7 @@ export class DefaultScheduler implements Scheduler {
     ): TE.TaskEither<NoHandlerFoundError, AnyJobHandler> {
         const { type } = job;
         const handler = this.handlers.get(type);
-        if (handler && handler.canExecute(job)) {
+        if (handler?.canExecute(job)) {
             return TE.right(handler);
         } else {
             logger.warn(`No handler found for job type ${type}.`);
@@ -168,15 +170,15 @@ export class DefaultScheduler implements Scheduler {
 
         return pipe(
             TE.Do,
-            TE.bind("job", () =>
-                this.jobRepository.upsert({
+            TE.bind("job", () => {
+                return this.jobRepository.upsert({
                     ...job,
                     state: JobState.RUNNING,
                     log: {
                         note: "Starting job...",
                     },
-                })
-            ),
+                });
+            }),
             TE.bindW("handler", () => this.findHandler(job)),
             TE.bindW("result", ({ handler }) => {
                 logger.info(`Executing job ${job.name}.`);
@@ -234,33 +236,60 @@ export class DefaultScheduler implements Scheduler {
             return TE.fromTask(() => Promise.resolve());
         }
 
+        const exec = this.executeNextJobs.bind(this);
+
+        const callback = () => {
+            exec()();
+        };
+
         return TE.tryCatch(
             async () => {
                 logger.info("Executing next batch of jobs...");
                 const startedAt = Date.now();
                 const jobs = await this.jobRepository.findNextJobs()();
-                await Promise.allSettled(
-                    jobs.map((job) => this.executeJob(job)())
-                );
-                // TODO: reporting
+                for (const job of jobs) {
+                    try {
+                        const result = await this.executeJob(job)();
+                        if (E.isRight(result)) {
+                            logger.info(
+                                `Job ${job.name} completed successfully.`
+                            );
+                        } else {
+                            logger.error(`Job failed: ${result.left.message}`);
+                        }
+                    } catch (e) {
+                        logger.error(
+                            `Job promise rejected. This is a bug! Reason: ${extractMessage(
+                                e
+                            )}`
+                        );
+                    }
+                }
                 const end = Date.now();
                 const passed = end - startedAt;
-                if (passed > this.jobCheckInterval.milliseconds) {
+                if (passed > this.jobCheckInterval.as("milliseconds")) {
                     logger.warn(
-                        `Job execution took longer (${passed}ms) than the check interval (${this.jobCheckInterval.milliseconds}ms).`
+                        `Job execution took longer (${passed}ms) than the check interval (${this.jobCheckInterval.as(
+                            "milliseconds"
+                        )}ms).`
                     );
                 }
-                logger.info(`Executed jobs in ${passed}ms.`);
+                logger.info(
+                    `Executed ${jobs.size} jobs in ${passed}ms. Scheduling next batch...`
+                );
                 this.timer.setTimeout(
-                    this.executeNextJobs.bind(this),
-                    this.jobCheckInterval.milliseconds
+                    callback,
+                    this.jobCheckInterval.as("milliseconds")
                 );
             },
             (error) => {
-                logger.error("Failed to execute next jobs.", error);
+                logger.error(
+                    "Failed to execute next jobs. This was not supposed to happen! Scheduling next batch...",
+                    error
+                );
                 this.timer.setTimeout(
-                    this.executeNextJobs.bind(this),
-                    this.jobCheckInterval.milliseconds
+                    callback,
+                    this.jobCheckInterval.as("milliseconds")
                 );
                 return new UnknownError(error);
             }

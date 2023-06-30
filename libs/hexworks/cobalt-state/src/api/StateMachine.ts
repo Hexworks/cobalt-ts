@@ -7,6 +7,7 @@ import * as TE from "fp-ts/TaskEither";
 import * as T from "fp-ts/lib/Task";
 import { pipe } from "fp-ts/lib/function";
 import { List, Map, Set } from "immutable";
+import { JsonObject } from "type-fest";
 import {
     AnyStateWithContext,
     State,
@@ -25,11 +26,17 @@ export type ErrorReporter = {
     report: (error: ProgramError, event: Event<string>) => T.Task<void>;
 };
 
-export type AutoDispatcherDeps<C, I = string, E = {}> = {
+export type AutoDispatcherDeps<
+    C,
+    B extends JsonObject = JsonObject,
+    I = string,
+    E = {}
+> = {
     eventBus: EventBus;
-    stateRepository: StateRepository<I, E>;
-    mapInstance: <D, N extends string>(
-        stateInstance: StateInstance<D, C, N>
+    stateRepository: StateRepository<I, B, E>;
+    mapInstance: <D extends B, N extends string>(
+        stateInstance: StateInstance<D, C, N>,
+        extras: E
     ) => StateEntity<I, D, E>;
     errorReporter: ErrorReporter;
 };
@@ -39,15 +46,21 @@ export type AutoDispatcherDeps<C, I = string, E = {}> = {
  * dispatch events to the appropriate states and stores the resulting
  * state instances in the given `stateRepository`.
  */
-export type AutoDispatcher<C, I = string, E = {}> = {
+export type AutoDispatcher<
+    C,
+    B extends JsonObject = JsonObject,
+    I = string,
+    E = {}
+> = {
     /**
      * Executes the entry actions for the given state instance
      * and saves the result as the current state.
      * @param instance
      * @returns
      */
-    create: <D, N extends string>(
-        instance: StateInstance<D, C, N>
+    create: <D extends B, N extends string>(
+        instance: StateInstance<D, C, N>,
+        extras: E
     ) => TE.TaskEither<ProgramError, StateEntity<I, D, E>>;
     stop: () => void;
 };
@@ -99,12 +112,17 @@ export type EventWithStateId<I> = Event<string> & {
  * @returns An `AutoDispatcher` that can be used to stop the auto-dispatching
  * or create new state instances.
  */
-export const autoDispatch = <C, I = string, E = {}>(
+export const autoDispatch = <
+    C,
+    B extends JsonObject = JsonObject,
+    I = string,
+    E = {}
+>(
     stateMachine: StateMachine<C, EventWithStateId<I>>
-): R.Reader<C & AutoDispatcherDeps<C, I, E>, AutoDispatcher<C, I, E>> => {
+): R.Reader<C & AutoDispatcherDeps<C, B, I, E>, AutoDispatcher<C, B, I, E>> => {
     const { supportedEventTypes, supportedStates } = stateMachine;
     return pipe(
-        R.ask<C & AutoDispatcherDeps<C, I, E>>(),
+        R.ask<C & AutoDispatcherDeps<C, B, I, E>>(),
         R.map((ctx) => {
             const { eventBus, stateRepository, errorReporter } = ctx;
             return {
@@ -158,12 +176,13 @@ export const autoDispatch = <C, I = string, E = {}>(
         R.map(({ subscriptions, ctx }) => {
             const { stateRepository, mapInstance } = ctx;
             return {
-                create: <D, N extends string>(
-                    instance: StateInstance<D, C, N>
+                create: <D extends B, N extends string>(
+                    instance: StateInstance<D, C, N>,
+                    extras: E
                 ) => {
                     return pipe(
                         stateMachine.enter(instance)(ctx),
-                        TE.map(mapInstance),
+                        TE.map((instance) => mapInstance(instance, extras)),
                         TE.chainW(stateRepository.upsert)
                     );
                 },

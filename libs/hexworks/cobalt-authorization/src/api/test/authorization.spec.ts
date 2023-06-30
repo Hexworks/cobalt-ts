@@ -1,13 +1,13 @@
 import { extractLeft, extractRight } from "@hexworks/cobalt-core";
-import { pipe } from "fp-ts/function";
 import * as O from "fp-ts/Option";
 import * as RTE from "fp-ts/ReaderTaskEither";
-import { AuthorizationError } from "..";
+import { pipe } from "fp-ts/function";
+import { AuthorizationError, AuthorizedOperationOf } from "..";
 import { authorize } from "../Authorization";
 import { Context } from "../Context";
 import { authorization } from "./authorization";
 import { anonUser, todos, userJane, userJohn } from "./fixtures";
-import { deleteTodo, Deps, findAllTodos, findTodo } from "./operations";
+import { Deps, deleteTodo, findAllTodos, findTodo } from "./operations";
 
 describe("Given some authorized operations", () => {
     const notificationService = {
@@ -20,9 +20,12 @@ describe("Given some authorized operations", () => {
         authorization,
     };
 
-    const authorizedFind = authorize(findTodo);
-    const authorizedDelete = authorize(deleteTodo);
-    const authorizedFindAll = authorize(findAllTodos);
+    const authorizedFind: AuthorizedOperationOf<typeof findTodo> =
+        authorize(findTodo);
+    const authorizedDelete: AuthorizedOperationOf<typeof deleteTodo> =
+        authorize(deleteTodo);
+    const authorizedFindAll: AuthorizedOperationOf<typeof findAllTodos> =
+        authorize(findAllTodos);
 
     const anonContext: Context<number> = {
         currentUser: anonUser,

@@ -1,18 +1,20 @@
 import { ProgramError, TaskResult } from "@hexworks/cobalt-core";
 import * as A from "fp-ts/Array";
-import { pipe } from "fp-ts/function";
 import * as RTE from "fp-ts/ReaderTaskEither";
+import { pipe } from "fp-ts/function";
 import {
     AnyUser,
     AuthorizationError,
     Context,
     Filter,
-    getPermissionFilterFor,
+    GetIdType,
     Operation,
     OperationDependencies,
     OperationResult,
     Policy,
     Role,
+    User,
+    getPermissionFilterFor,
 } from ".";
 
 /**
@@ -36,13 +38,18 @@ export type AuthorizedOperationBrand = {
 /**
  * A {@link TaskResult} that contains a {@link Context} object (of type `T`).
  */
-export type ContextTaskResult<T> = TaskResult<ProgramError, Context<T>>;
+export type ContextTaskResult<
+    RESULT,
+    USER extends User<ID> = AnyUser,
+    ID = GetIdType<USER>
+> = TaskResult<ProgramError, Context<RESULT, USER, ID>>;
 
-export type ContextOperationResult<O, D> = OperationResult<
-    ProgramError,
-    Context<O>,
-    D
->;
+export type ContextOperationResult<
+    DEPENDENCIES,
+    RESULT,
+    USER extends User<ID> = AnyUser,
+    ID = GetIdType<USER>
+> = OperationResult<ProgramError, DEPENDENCIES, Context<RESULT, USER, ID>>;
 
 /**
  * An `AuthorizedOperation` is an {@link Operation} that has been authorized
@@ -63,22 +70,35 @@ export type ContextOperationResult<O, D> = OperationResult<
  * )
  * ```
  */
-export type AuthorizedOperation<I, O, D> = (
-    input: ContextOperationResult<I, D>
-) => ContextOperationResult<O, D> & AuthorizedOperationBrand;
+export type AuthorizedOperation<
+    INPUT,
+    DEPENDENCIES,
+    RESULT,
+    USER extends User<ID> = AnyUser,
+    ID = GetIdType<USER>
+> = (
+    input: ContextOperationResult<DEPENDENCIES, INPUT, USER, ID>
+) => ContextOperationResult<DEPENDENCIES, RESULT, USER, ID> &
+    AuthorizedOperationBrand;
 
 /**
  * Takes an {@link Operation} and augments it with the given `authorization` information.
  * After an `Operation` is authorized it is safe to call it with any {@link Context} object.
  */
-export const authorize = <I, O, D extends OperationDependencies>(
-    operation: Operation<I, O, D>
-): AuthorizedOperation<I, O, D> => {
-    return ((input: ContextOperationResult<I, D>) => {
+export const authorize = <
+    INPUT,
+    DEPENDENCIES extends OperationDependencies,
+    RESULT,
+    USER extends User<ID> = AnyUser,
+    ID = GetIdType<USER>
+>(
+    operation: Operation<INPUT, DEPENDENCIES, RESULT>
+): AuthorizedOperation<INPUT, DEPENDENCIES, RESULT, USER, ID> => {
+    return ((input: ContextOperationResult<DEPENDENCIES, INPUT, USER, ID>) => {
         return pipe(
             RTE.Do,
             RTE.bind("context", () => input),
-            RTE.bindW("deps", () => RTE.ask<D>()),
+            RTE.bindW("deps", () => RTE.ask<DEPENDENCIES>()),
             RTE.chainW(({ context, deps }) => {
                 const { authorization } = deps;
                 const { currentUser: user } = context;
@@ -88,7 +108,13 @@ export const authorize = <I, O, D extends OperationDependencies>(
                     Object.keys(roles),
                     A.filter((role) => user.roles.includes(role)),
                     A.chain((role) => roles[role]?.permissions ?? []),
-                    getPermissionFilterFor(operation)
+                    getPermissionFilterFor<
+                        INPUT,
+                        DEPENDENCIES,
+                        RESULT,
+                        USER,
+                        ID
+                    >(operation)
                 );
 
                 const policies = pipe(
@@ -115,26 +141,37 @@ export const authorize = <I, O, D extends OperationDependencies>(
                     executeOperation(operation, user)
                 );
 
-                return applyFilters(filters, result);
+                return applyFilters<DEPENDENCIES, RESULT, USER, ID>(
+                    filters,
+                    result
+                );
             })
         );
-    }) as AuthorizedOperation<I, O, D>;
+    }) as AuthorizedOperation<INPUT, DEPENDENCIES, RESULT, USER, ID>;
 };
 
-const evaluatePolicies = <I, D>(context: Context<I>) =>
-    A.reduce<Policy<I, D>, OperationResult<ProgramError, Context<I>, D>>(
-        RTE.right(context),
-        (acc, policy) => pipe(acc, RTE.chain(policy))
-    );
-
-const executeOperation = <I, O, D extends OperationDependencies>(
-    operation: Operation<I, O, D>,
-    user: AnyUser
+const evaluatePolicies = <INPUT, DEPENDENCIES, USER extends User<ID>, ID>(
+    context: Context<INPUT, USER, ID>
 ) =>
-    RTE.chain((context: Context<I>) =>
+    A.reduce<
+        Policy<INPUT, DEPENDENCIES, USER, ID>,
+        OperationResult<ProgramError, DEPENDENCIES, Context<INPUT, USER, ID>>
+    >(RTE.right(context), (acc, policy) => pipe(acc, RTE.chain(policy)));
+
+const executeOperation = <
+    INPUT,
+    DEPENDENCIES extends OperationDependencies,
+    RESULT,
+    USER extends User<ID>,
+    ID
+>(
+    operation: Operation<INPUT, DEPENDENCIES, RESULT>,
+    user: USER
+) =>
+    RTE.chain((context: Context<INPUT, USER, ID>) =>
         pipe(
             operation(context.data),
-            RTE.map((output: O) => {
+            RTE.map((output: RESULT) => {
                 return {
                     currentUser: user,
                     data: output,
@@ -143,14 +180,14 @@ const executeOperation = <I, O, D extends OperationDependencies>(
         )
     );
 
-const applyFilters = <O, D>(
-    filters: Filter<O, D>[],
-    result: ContextOperationResult<O, D>
+const applyFilters = <DEPENDENCIES, RESULT, USER extends User<ID>, ID>(
+    filters: Filter<DEPENDENCIES, RESULT, USER, ID>[],
+    result: ContextOperationResult<DEPENDENCIES, RESULT, USER, ID>
 ) =>
     pipe(
         filters,
-        A.reduce<Filter<O, D>, ContextOperationResult<O, D>>(
-            result,
-            (acc, filter) => pipe(acc, RTE.chain(filter))
-        )
+        A.reduce<
+            Filter<DEPENDENCIES, RESULT, USER, ID>,
+            ContextOperationResult<DEPENDENCIES, RESULT, USER, ID>
+        >(result, (acc, filter) => pipe(acc, RTE.chain(filter)))
     );

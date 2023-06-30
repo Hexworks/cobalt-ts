@@ -22,3 +22,6 @@ export const toJson = (error: ProgramError): JsonObject => {
         cause: error.cause ? toJson(error.cause) : null,
     };
 };
+
+export const extractMessage = (error: unknown, defaultMessage = "unknown") =>
+    error instanceof Error ? error.message : defaultMessage;
