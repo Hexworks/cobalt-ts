@@ -14,19 +14,19 @@ export type AnyStateWithContext<C> = State<any, C, string>;
 /**
  * Describes the shape of a state in a state machine. Does not contain the
  * actual data (@see StateInstance).
- * @param D The type of the data that is stored in the state.
- * @param C The type of the context that is passed to the state machine.
- * @param N The name of the state.
+ * @param DATA The type of the data that is stored in the state.
+ * @param CONTEXT The type of the context that is passed to the state machine.
+ * @param NAME The name of the state.
  */
-export type State<D, C, N extends string> = {
+export type State<DATA, CONTEXT, NAME extends string> = {
     /**
      * The schema of the data that is stored in the state.
      */
-    readonly schema: Schema<D>;
+    readonly schema: Schema<DATA>;
     /**
      * The name of the state (must be unique within a state machine).
      */
-    readonly name: N;
+    readonly name: NAME;
     /**
      * The transitions that can be triggered by events.
      * @param T The type (string representation) of the event.
@@ -35,43 +35,61 @@ export type State<D, C, N extends string> = {
      */
     readonly transitions: {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        [T in string]: Transition<D, C, unknown, T, AnyEventWithType<T>>[];
+        [T in string]: Transition<
+            DATA,
+            CONTEXT,
+            unknown,
+            T,
+            AnyEventWithType<T>
+        >[];
     };
     /**
      * An action that will be executed when the state is **entered**.
      * @param data The data that is stored in the state.
      * @see StateInstance
      */
-    readonly onEntry: (data: D) => RTE.ReaderTaskEither<C, ProgramError, D>;
+    readonly onEntry: (
+        data: DATA
+    ) => RTE.ReaderTaskEither<CONTEXT, ProgramError, DATA>;
     /**
      * An action that will be executed when the state is **exited**
      * (after a successful state transition).
      * @param data The data that is stored in the state.
      * @see StateInstance
      */
-    readonly onExit: (data: D) => RTE.ReaderTaskEither<C, ProgramError, D>;
+    readonly onExit: (
+        data: DATA
+    ) => RTE.ReaderTaskEither<CONTEXT, ProgramError, DATA>;
 };
 
 /**
  * Builder function that can be used to create a new state.
  * @param name the unique name of the state.
- * @param D The type of the data that is stored in the state.
- * @param C The type of the context that is passed to the state machine.
- * @param N The name of the state.
+ * @param DATA The type of the data that is stored in the state.
+ * @param CONTEXT The type of the context that is passed to the state machine.
+ * @param NAME The name of the state.
  * @returns
  */
-export const state = <D = void, C = never, N extends string = string>(
-    name: N
-): StateBuilder<D, C, N> => {
+export const state = <
+    DATA = void,
+    CONTEXT = never,
+    NAME extends string = string
+>(
+    name: NAME
+): StateBuilder<DATA, CONTEXT, NAME> => {
     return new DefaultStateBuilder(name);
 };
 
 /**
  * Returns a new {@link StateInstance} with the given data.
  */
-export const newState = <D = void, C = never, N extends string = string>(
-    state: State<D, C, N>,
-    data: D
+export const newState = <
+    DATA = void,
+    CONTEXT = never,
+    NAME extends string = string
+>(
+    state: State<DATA, CONTEXT, NAME>,
+    data: DATA
 ) =>
     RTE.right({
         state,

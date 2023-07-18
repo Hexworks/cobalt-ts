@@ -170,7 +170,7 @@ const executeOperation = <
 ) =>
     RTE.chain((context: Context<INPUT, USER, ID>) =>
         pipe(
-            operation(context.data),
+            operation.execute(context.data),
             RTE.map((output: RESULT) => {
                 return {
                     currentUser: user,

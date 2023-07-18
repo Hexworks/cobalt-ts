@@ -21,7 +21,7 @@ export type AnyExecutionResult = TE.TaskEither<
  * - error handling
  * - result handling
  */
-export interface JobHandler<T extends JsonObject> {
+export interface JobHandler<DATA extends JsonObject> {
     /**
      * The type of job this handler can handle.
      */
@@ -29,17 +29,21 @@ export interface JobHandler<T extends JsonObject> {
     /**
      * Tells whether this handler can execute the given {@link JobDescriptor}.
      */
-    canExecute: (info: JobDescriptor<JsonObject>) => info is JobDescriptor<T>;
+    canExecute: (
+        info: JobDescriptor<JsonObject>
+    ) => info is JobDescriptor<DATA>;
     /**
-     * Executes the task with the given {@link JobDescriptor}.
+     * Executes the task with the given {@link JobContext}.
      */
-    execute: (context: JobContext<T>) => TE.TaskEither<ProgramError, JobResult>;
+    execute: (
+        context: JobContext<DATA>
+    ) => TE.TaskEither<ProgramError, JobResult>;
 
     onResult: (
-        result: JobExecutionResult<T, JobResult>
+        result: JobExecutionResult<DATA, JobResult>
     ) => TE.TaskEither<ProgramError, void>;
 
     onError: (
-        error: JobExecutionError<T>
-    ) => TE.TaskEither<JobExecutionError<T>, void>;
+        error: JobExecutionError<DATA>
+    ) => TE.TaskEither<JobExecutionError<DATA>, void>;
 }

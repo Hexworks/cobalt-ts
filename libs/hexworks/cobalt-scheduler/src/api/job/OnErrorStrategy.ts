@@ -3,9 +3,12 @@ import * as TE from "fp-ts/lib/TaskEither";
 import { JsonObject } from "type-fest";
 import { JobExecutionError } from "../error";
 
-export type OnErrorStrategy<T extends JsonObject, E extends ProgramError> = {
-    canHandle: (error: ProgramError) => error is E;
+export type OnErrorStrategy<
+    DATA extends JsonObject,
+    ERROR extends ProgramError
+> = {
+    canHandle: (error: ProgramError) => error is ERROR;
     onError: (
-        error: JobExecutionError<T>
-    ) => TE.TaskEither<JobExecutionError<T>, void>;
+        error: JobExecutionError<DATA>
+    ) => TE.TaskEither<JobExecutionError<DATA>, void>;
 };

@@ -49,7 +49,14 @@ export type Operation<
     INPUT,
     DEPENDENCIES extends OperationDependencies,
     RESULT
-> = (input: INPUT) => OperationResult<ProgramError, DEPENDENCIES, RESULT>;
+> = {
+    // 📙 We could have a function instead of `name` + `execute` but in that case if the
+    // operation is an anonymous function its `name` would be `""`, so we made it explicit.
+    name: string;
+    execute: (
+        input: INPUT
+    ) => OperationResult<ProgramError, DEPENDENCIES, RESULT>;
+};
 
 export type OperationResult<
     ERROR extends ProgramError,

@@ -4,9 +4,12 @@ import { JsonObject } from "type-fest";
 import { JobExecutionResult } from "./JobContext";
 import { JobResult } from "./JobResult";
 
-export type OnResultStrategy<T extends JsonObject, R extends JobResult> = {
-    canHandle: (result: JobResult) => result is R;
+export type OnResultStrategy<
+    INPUT extends JsonObject,
+    OUTPUT extends JobResult
+> = {
+    canHandle: (result: JobResult) => result is OUTPUT;
     onResult: (
-        context: JobExecutionResult<T, R>
+        context: JobExecutionResult<INPUT, OUTPUT>
     ) => TE.TaskEither<ProgramError, void>;
 };

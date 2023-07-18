@@ -3,11 +3,11 @@ import { JsonObject } from "type-fest";
 import { JobContext, JobHandler } from "../job";
 
 export class JobExecutionError<
-    T extends JsonObject
+    DATA extends JsonObject
 > extends ProgramErrorBase<"JobExecutionError"> {
     constructor(
-        public jobContext: JobContext<T>,
-        public handler: JobHandler<T>,
+        public jobContext: JobContext<DATA>,
+        public handler: JobHandler<DATA>,
         override cause: ProgramError
     ) {
         super({

@@ -7,7 +7,8 @@ export type AnyJob = Job<JsonObject>;
 /**
  * Represents an individual **job** instance.
  */
-export type Job<T extends JsonObject> = JobDescriptor<T> & {
+export type Job<DATA extends JsonObject> = JobDescriptor<DATA> & {
+    id: string;
     /**
      * A unique identifier that can be used to find jobs that were caused
      * by each other. This will be filled in by the scheduler.

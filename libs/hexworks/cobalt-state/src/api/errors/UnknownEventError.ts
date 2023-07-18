@@ -1,13 +1,12 @@
 import { ProgramErrorBase } from "@hexworks/cobalt-core";
-import { Event } from "@hexworks/cobalt-events";
 
 export class UnknownEventError extends ProgramErrorBase<"UnknownEventError"> {
-    constructor(public event: Event<string>) {
+    constructor(stateName: string, eventType: string) {
         super({
             __tag: "UnknownEventError",
-            message: `Current state doesn't respond to event ${event.type}`,
+            message: `Current state '${stateName}' doesn't respond to event of type '${eventType}'`,
             details: {
-                eventType: event.type,
+                eventType: eventType,
             },
         });
     }

@@ -55,17 +55,19 @@ export type CondFinisherBuilder<
     ) => StateBuilder<S, C, N>;
 };
 
-export type StateBuilder<D, C, N extends string> = {
-    withSchema(schema: Schema<D>): StateBuilder<D, C, N>;
+export type StateBuilder<DATA, CONTEXT, NAME extends string> = {
+    withSchema(schema: Schema<DATA>): StateBuilder<DATA, CONTEXT, NAME>;
     onEvent: <E extends Event<T>, T extends string = GetEventType<E>>(
         type: T,
-        fn: (builder: TransitionBuilder<D, C, T, E, N>) => StateBuilder<D, C, N>
-    ) => StateBuilder<D, C, N>;
+        fn: (
+            builder: TransitionBuilder<DATA, CONTEXT, T, E, NAME>
+        ) => StateBuilder<DATA, CONTEXT, NAME>
+    ) => StateBuilder<DATA, CONTEXT, NAME>;
     onEntry: (
-        fn: (data: D) => RTE.ReaderTaskEither<C, ProgramError, D>
-    ) => StateBuilder<D, C, N>;
+        fn: (data: DATA) => RTE.ReaderTaskEither<CONTEXT, ProgramError, DATA>
+    ) => StateBuilder<DATA, CONTEXT, NAME>;
     onExit: (
-        fn: (data: D) => RTE.ReaderTaskEither<C, ProgramError, D>
-    ) => StateBuilder<D, C, N>;
-    build: () => Readonly<State<D, C, N>>;
+        fn: (data: DATA) => RTE.ReaderTaskEither<CONTEXT, ProgramError, DATA>
+    ) => StateBuilder<DATA, CONTEXT, NAME>;
+    build: () => Readonly<State<DATA, CONTEXT, NAME>>;
 };

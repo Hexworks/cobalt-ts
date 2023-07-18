@@ -1,5 +1,5 @@
-import * as T from "fp-ts/Task";
-import * as TE from "fp-ts/TaskEither";
+import * as RT from "fp-ts/ReaderTask";
+import * as RTE from "fp-ts/ReaderTaskEither";
 import { List } from "immutable";
 import { JsonObject } from "type-fest";
 import {
@@ -39,39 +39,42 @@ export type JobToSave<T extends JsonObject> = JobDescriptor<T> & {
     log?: UnsavedLog;
 };
 
+export type JobToUpdate<T extends JsonObject> = JobToSave<T> & {
+    id: string;
+};
+
 /**
  * This repository is responsible for persisting and loading {@link Job}s.
+ * @param CONTEXT the context of the database functions (eg: a database transaction)
  */
-export type JobRepository = {
+// eslint-disable-next-line @typescript-eslint/ban-types
+export type JobRepository<CONTEXT> = {
     /**
-     * Tries to find a job by its unique name.
+     * Returns the next jobs that should be executed (eg: where scheduledAt <= now).
+     * **Note that** this function also filters for job states that are in the
+     * {@link JobState.SCHEDULED} state.
      */
-    findByName: (
-        name: string
-    ) => TE.TaskEither<JobNotFoundError, Job<JsonObject>>;
+    findNextJobs: () => RT.ReaderTask<CONTEXT, List<AnyJob>>;
     /**
-     * Tries to delete a job by its unique name.
+     * Creates the given job.
      */
-    deleteByName: (
-        name: string
-    ) => TE.TaskEither<JobNotFoundError, Job<JsonObject>>;
+    create: <D extends JsonObject>(
+        job: JobToSave<D>
+    ) => RTE.ReaderTaskEither<CONTEXT, JobStorageError, Job<D>>;
+    /**
+     * Updates the given job.
+     */
+    update: <D extends JsonObject>(
+        job: JobToUpdate<D>
+    ) => RTE.ReaderTaskEither<CONTEXT, JobStorageError, Job<D>>;
+    deleteById: (
+        id: string
+    ) => RTE.ReaderTaskEither<CONTEXT, JobNotFoundError, Job<JsonObject>>;
     /**
      * Tries to delete all jobs having the given correlationId.
      * @returns the number of deleted records
      */
     deleteByCorrelationId: (
         correlationId: string
-    ) => TE.TaskEither<JobStorageError, number>;
-    /**
-     * Returns the next jobs that should be executed (eg: where scheduledAt <= now).
-     * **Note that** this function also filters for job states that are in the
-     * {@link JobState.SCHEDULED} state.
-     */
-    findNextJobs: () => T.Task<List<AnyJob>>;
-    /**
-     * Creates or updates the given job.
-     */
-    upsert: <T extends JsonObject>(
-        job: JobToSave<T>
-    ) => TE.TaskEither<JobStorageError, Job<T>>;
+    ) => RTE.ReaderTaskEither<CONTEXT, JobStorageError, number>;
 };

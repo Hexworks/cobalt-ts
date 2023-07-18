@@ -1,6 +1,6 @@
 import { ProgramError } from "@hexworks/cobalt-core";
 import { EventBus } from "@hexworks/cobalt-events";
-import { Scheduler } from "@hexworks/cobalt-scheduler";
+import { ContextBoundScheduler } from "@hexworks/cobalt-scheduler";
 import * as TE from "fp-ts/lib/TaskEither";
 
 export type FormDataRepository = {
@@ -8,7 +8,7 @@ export type FormDataRepository = {
 };
 
 export type Context = {
-    scheduler: Scheduler;
+    scheduler: ContextBoundScheduler;
     eventBus: EventBus;
     formDataRepository: FormDataRepository;
 };

@@ -1,9 +1,9 @@
-import { createLogger } from "@hexworks/cobalt-core";
-import { ProgramError } from "@hexworks/cobalt-core";
+import { ProgramError, createLogger } from "@hexworks/cobalt-core";
 import * as TE from "fp-ts/TaskEither";
 import { Logger } from "tslog";
 import { JsonObject } from "type-fest";
 import { Schema } from "zod";
+import { JobExecutionError } from "./error";
 import {
     JobContext,
     JobDescriptor,
@@ -13,33 +13,35 @@ import {
     OnErrorStrategy,
     OnResultStrategy,
 } from "./job";
-import { JobExecutionError } from "./error";
 
-type Params<T extends JsonObject> = {
+type Params<DATA extends JsonObject> = {
     type: string;
     /**
      * The schema that is used to validate the input data for the task.
      */
-    inputSchema: Schema<T>;
-    execute(context: JobContext<T>): TE.TaskEither<ProgramError, JobResult>;
+    inputSchema: Schema<DATA>;
+    execute(context: JobContext<DATA>): TE.TaskEither<ProgramError, JobResult>;
     logger?: Logger<unknown>;
     /**
      * Strategies that the handler will choose from to handle the result of the job.
      * {@link JobResult} is the base type of all results, and it contains the `type`
      * field that is used to determine which strategy to use.
      */
-    resultStrategies?: OnResultStrategy<T, JobResult>[];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    resultStrategies?: OnResultStrategy<DATA, any>[];
     /**
      * Strategies that the handler will choose from to handle if there was an error.
      */
-    errorStrategies?: OnErrorStrategy<T, ProgramError>[];
+    errorStrategies?: OnErrorStrategy<DATA, ProgramError>[];
 };
 
-export class JobHandlerBase<T extends JsonObject> implements JobHandler<T> {
-    public inputSchema: Schema<T>;
+export class JobHandlerBase<DATA extends JsonObject>
+    implements JobHandler<DATA>
+{
+    public inputSchema: Schema<DATA>;
     public type: string;
     public execute: (
-        context: JobContext<T>
+        context: JobContext<DATA>
     ) => TE.TaskEither<ProgramError, JobResult>;
 
     protected logger: Logger<unknown>;
@@ -48,11 +50,11 @@ export class JobHandlerBase<T extends JsonObject> implements JobHandler<T> {
      * {@link JobResult} is the base type of all results, and it contains the `type`
      * field that is used to determine which strategy to use.
      */
-    private resultStrategies: OnResultStrategy<T, JobResult>[];
+    private resultStrategies: OnResultStrategy<DATA, JobResult>[];
     /**
      * Strategies that the handler will choose from to handle if there was an error.
      */
-    private errorStrategies: OnErrorStrategy<T, ProgramError>[];
+    private errorStrategies: OnErrorStrategy<DATA, ProgramError>[];
 
     constructor({
         type,
@@ -61,7 +63,7 @@ export class JobHandlerBase<T extends JsonObject> implements JobHandler<T> {
         execute,
         resultStrategies,
         errorStrategies,
-    }: Params<T>) {
+    }: Params<DATA>) {
         this.type = type;
         this.execute = execute;
         this.inputSchema = inputSchema;
@@ -70,17 +72,23 @@ export class JobHandlerBase<T extends JsonObject> implements JobHandler<T> {
         this.errorStrategies = errorStrategies ?? [];
     }
 
-    canExecute(info: JobDescriptor<JsonObject>): info is JobDescriptor<T> {
-        return this.inputSchema.safeParse(info.data).success;
+    canExecute(job: JobDescriptor<JsonObject>): job is JobDescriptor<DATA> {
+        const result = this.inputSchema.safeParse(job.data);
+        if (!result.success) {
+            this.logger.warn(
+                `Job ${job.name} cannot be executed because the input data is invalid: ${result.error.message}`
+            );
+        }
+        return this.inputSchema.safeParse(job.data).success;
     }
 
-    onResult({ job, result, scheduler }: JobExecutionResult<T, JobResult>) {
+    onResult({ job, result, schedule }: JobExecutionResult<DATA, JobResult>) {
         const strategy = this.resultStrategies.find((s) => s.canHandle(result));
         if (strategy) {
             return strategy.onResult({
                 result,
                 job,
-                scheduler,
+                schedule,
                 data: job.data,
             });
         }
@@ -90,7 +98,7 @@ export class JobHandlerBase<T extends JsonObject> implements JobHandler<T> {
         return TE.right(undefined);
     }
 
-    onError(error: JobExecutionError<T>) {
+    onError(error: JobExecutionError<DATA>) {
         const job = error.jobContext.job;
         const strategy = this.errorStrategies.find((s) => s.canHandle(error));
         if (strategy) {
@@ -101,6 +109,8 @@ export class JobHandlerBase<T extends JsonObject> implements JobHandler<T> {
     }
 }
 
-export const createJobHandler = <T extends JsonObject>(params: Params<T>) => {
-    return new JobHandlerBase<T>(params);
+export const createJobHandler = <DATA extends JsonObject>(
+    params: Params<DATA>
+) => {
+    return new JobHandlerBase<DATA>(params);
 };

@@ -29,9 +29,9 @@ export interface EventBus {
      * of {@link Task} for more information), you need to take care of all errors
      * within the callback itself.
      */
-    subscribe<T extends string, E extends Event<T>>(
-        type: T,
-        fn: (event: E) => T.Task<CallbackResult>,
+    subscribe<TYPE extends string, EVENT extends Event<TYPE>>(
+        type: TYPE,
+        fn: (event: EVENT) => T.Task<CallbackResult>,
         scope?: string
     ): Subscription;
 
@@ -39,8 +39,8 @@ export interface EventBus {
      * Publishes the given {@link Event} to all listeners that have the same
      * `scope` and `type`. By default {@link DEFAULT_EVENT_SCOPE} will be used.
      */
-    publish<T extends string, E extends Event<T>>(
-        event: E,
+    publish<TYPE extends string, EVENT extends Event<TYPE>>(
+        event: EVENT,
         scope?: string
     ): T.Task<void>;
 

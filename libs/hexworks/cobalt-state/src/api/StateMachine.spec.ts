@@ -1,22 +1,20 @@
-import { IdProvider, ZodValidationError } from "@hexworks/cobalt-core";
+import { ZodValidationError } from "@hexworks/cobalt-core";
 import { EventBus } from "@hexworks/cobalt-events";
-import { Job, JobState, Scheduler } from "@hexworks/cobalt-scheduler";
+import {
+    ContextBoundScheduler,
+    Job,
+    JobState,
+} from "@hexworks/cobalt-scheduler";
 import * as T from "fp-ts/Task";
 import * as E from "fp-ts/lib/Either";
 import * as TE from "fp-ts/lib/TaskEither";
 import { List } from "immutable";
 import { MockProxy, mock, objectContainsValue } from "jest-mock-extended";
 import { JsonObject } from "type-fest";
-import { v4 as generateId } from "uuid";
 import {
     AnyStateWithContext,
-    AutoDispatcherDeps,
-    ErrorReporter,
     EventWithStateId,
-    StateEntity,
-    StateInstance,
     StateMachine,
-    StateRepository,
     UnknownEventError,
     UnknownStateError,
     newStateMachine,
@@ -78,42 +76,22 @@ const NonExistentState = state<void, Context>("NonExistentState").build();
 describe("Given a state machine StateMachine", () => {
     let target: StateMachine<Context, EventWithStateId<string>>;
 
-    let idProvider: IdProvider<string>;
-    let context: Context & AutoDispatcherDeps<Context>;
+    let context: Context;
     let eventBus: MockProxy<EventBus>;
     let formDataRepository: MockProxy<FormDataRepository>;
-    let scheduler: MockProxy<Scheduler>;
-    let stateRepository: MockProxy<StateRepository>;
-    let errorReporter: MockProxy<ErrorReporter>;
-    let mapInstance: <D, N extends string>(
-        instance: StateInstance<D, Context, N>,
-        extras: unknown
-    ) => StateEntity<string, D, unknown>;
+    let scheduler: MockProxy<ContextBoundScheduler>;
 
     beforeEach(() => {
-        idProvider = {
-            generateId,
-        };
         eventBus = mock<EventBus>();
         formDataRepository = mock<FormDataRepository>();
         // eslint-disable-next-line @typescript-eslint/ban-ts-comment
         // @ts-ignore
-        scheduler = mock<Scheduler>();
-        stateRepository = mock<StateRepository>();
-        errorReporter = mock<ErrorReporter>();
-        mapInstance = (instance) => ({
-            id: idProvider.generateId(),
-            stateName: instance.state.name,
-            data: instance.data,
-        });
+        scheduler = mock<ContextBoundScheduler>();
 
         context = {
             eventBus,
             formDataRepository,
             scheduler,
-            stateRepository,
-            errorReporter,
-            mapInstance,
         };
         target = newStateMachine(
             List.of<AnyStateWithContext<Context>>(

@@ -5,12 +5,14 @@ import {
     sleep,
 } from "@hexworks/cobalt-core";
 import * as E from "fp-ts/Either";
-import * as T from "fp-ts/Task";
+import * as RT from "fp-ts/ReaderTask";
+import * as RTE from "fp-ts/ReaderTaskEither";
 import * as TE from "fp-ts/TaskEither";
 import { List } from "immutable";
 import { MockProxy, any, mock } from "jest-mock-extended";
 import { Duration } from "luxon";
 import * as z from "zod";
+import { v4 as uuid } from "uuid";
 import {
     AnyJobHandler,
     Job,
@@ -38,6 +40,8 @@ const NumbersToAdd = z.object({
     second: z.number(),
 });
 
+type NumbersToAdd = z.infer<typeof NumbersToAdd>;
+
 export type Success<R> = JobResult & {
     type: "success";
     result: R;
@@ -48,24 +52,19 @@ export const Success = <R>(result: R): Success<R> => ({
     result,
 });
 
-type NumbersToAdd = z.infer<typeof NumbersToAdd>;
-
 let NUMBER_ADDER_EXECUTION_RESULTS: JobExecutionResult<
     NumbersToAdd,
     JobResult
 >[] = [];
 
-let NUMBER_ADDER_EXECUTION_ERRORS: JobExecutionError<
-    NumbersToAdd,
-    JobResult
->[] = [];
+let NUMBER_ADDER_EXECUTION_ERRORS: JobExecutionError<NumbersToAdd>[] = [];
 
 const REPORT_RESULT_STRATEGY: OnResultStrategy<
     NumbersToAdd,
     Success<number>
 > = {
     canHandle: function (result: JobResult): result is Success<number> {
-        return true;
+        return result.type === "success";
     },
     onResult: function (
         context: JobExecutionResult<
@@ -126,6 +125,7 @@ const ADD_1_AND_2_CREATION_DATE = new Date();
 
 const SAVED_ADD_1_AND_2_JOB: Job<NumbersToAdd> = {
     ...UNSAVED_ADD_1_AND_2_JOB,
+    id: uuid(),
     createdAt: ADD_1_AND_2_CREATION_DATE,
     updatedAt: ADD_1_AND_2_CREATION_DATE,
     log: [],
@@ -139,7 +139,7 @@ const SAVED_ADD_1_AND_2_JOB_FOR_LATER = {
 };
 
 describe("Given a Scheduler", () => {
-    let jobRepository: MockProxy<JobRepository>;
+    let jobRepository: MockProxy<JobRepository<undefined>>;
     let handlers: Map<string, AnyJobHandler>;
     let timer: MockProxy<Timer>;
     let idProvider: MockProxy<IdProvider<string>>;
@@ -149,7 +149,7 @@ describe("Given a Scheduler", () => {
         NUMBER_ADDER_EXECUTION_RESULTS = [];
         NUMBER_ADDER_EXECUTION_ERRORS = [];
 
-        jobRepository = mock<JobRepository>();
+        jobRepository = mock<JobRepository<undefined>>();
         timer = mock<Timer>();
         idProvider = mock<IdProvider<string>>();
 
@@ -181,26 +181,26 @@ describe("Given a Scheduler", () => {
 
         test("Then it should start properly", async () => {
             jobRepository.findNextJobs.mockReturnValue(
-                T.of(List.of(SAVED_ADD_1_AND_2_JOB))
+                RT.of(List.of(SAVED_ADD_1_AND_2_JOB))
             );
-            jobRepository.upsert.mockReturnValue(
-                TE.right(SAVED_ADD_1_AND_2_JOB)
+            jobRepository.update.mockReturnValue(
+                RTE.right(SAVED_ADD_1_AND_2_JOB)
             );
 
-            const result = await target.start()();
+            const result = await target.start()(undefined)();
 
             expect(result).toEqual(E.right(undefined));
         });
 
         test("Then it should run the specified jobs periodically", async () => {
             jobRepository.findNextJobs.mockReturnValue(
-                T.of(List.of(SAVED_ADD_1_AND_2_JOB))
+                RT.of(List.of(SAVED_ADD_1_AND_2_JOB))
             );
-            jobRepository.upsert.mockReturnValue(
-                TE.right(SAVED_ADD_1_AND_2_JOB)
+            jobRepository.update.mockReturnValue(
+                RTE.right(SAVED_ADD_1_AND_2_JOB)
             );
 
-            await target.start()();
+            await target.start()(undefined)();
 
             await sleep(jobCheckIntervalMs * 2)();
 
@@ -218,30 +218,30 @@ describe("Given a Scheduler", () => {
         });
 
         test("Then it should check for jobs according to the config", async () => {
-            jobRepository.findNextJobs.mockReturnValue(T.of(List.of()));
+            jobRepository.findNextJobs.mockReturnValue(RT.of(List.of()));
 
-            await target.start()();
+            await target.start()(undefined)();
 
             expect(jobRepository.findNextJobs).toHaveBeenCalled();
         });
 
         test("Then it should reschedule after jobs are executed", async () => {
-            jobRepository.findNextJobs.mockReturnValue(T.of(List.of()));
+            jobRepository.findNextJobs.mockReturnValue(RT.of(List.of()));
 
-            await target.start()();
+            await target.start()(undefined)();
 
             expect(timer.setTimeout).toHaveBeenCalled();
         });
 
         test("Then it should reschedule even if there was an error", async () => {
-            await target.start()();
+            await target.start()(undefined)();
 
             expect(timer.setTimeout).toHaveBeenCalled();
         });
 
         test("Then it fails if it was already stopped", async () => {
-            await target.stop()();
-            const result = await target.start()();
+            await target.stop()(undefined)();
+            const result = await target.start()(undefined)();
 
             if (E.isRight(result)) {
                 fail("Expected failure");
@@ -251,8 +251,8 @@ describe("Given a Scheduler", () => {
         });
 
         test("Then it fails if it was already running", async () => {
-            await target.start()();
-            const result = await target.start()();
+            await target.start()(undefined)();
+            const result = await target.start()(undefined)();
 
             if (E.isRight(result)) {
                 fail("Expected failure");
@@ -262,7 +262,7 @@ describe("Given a Scheduler", () => {
         });
 
         test("Then it should reschedule after running all the jobs", async () => {
-            jobRepository.findNextJobs.mockReturnValue(T.of(List.of()));
+            jobRepository.findNextJobs.mockReturnValue(RT.of(List.of()));
 
             target.schedule({
                 name: "My Test Job",
@@ -271,7 +271,7 @@ describe("Given a Scheduler", () => {
                 data: {},
             });
 
-            await target.start()();
+            await target.start()(undefined)();
 
             await sleep(100)();
         });
@@ -279,7 +279,7 @@ describe("Given a Scheduler", () => {
 
     describe("When a job is scheduled", () => {
         test("Then it should fail if the scheduler was not running", async () => {
-            const result = await target.schedule(ADD_1_AND_2_JOB)();
+            const result = await target.schedule(ADD_1_AND_2_JOB)(undefined)();
 
             if (E.isRight(result)) {
                 fail("Expected failure");
@@ -290,15 +290,15 @@ describe("Given a Scheduler", () => {
 
         test("Then it should successfully schedule if the scheduler was running", async () => {
             handlers.set("NumberAdder", NumberAdder(false));
-            jobRepository.findNextJobs.mockReturnValue(T.of(List.of()));
+            jobRepository.findNextJobs.mockReturnValue(RT.of(List.of()));
             idProvider.generateId.mockReturnValue(CORRELATION_ID);
-            jobRepository.upsert.mockReturnValue(
-                TE.right(SAVED_ADD_1_AND_2_JOB)
+            jobRepository.create.mockReturnValue(
+                RTE.right(SAVED_ADD_1_AND_2_JOB)
             );
 
-            await target.start()();
+            await target.start()(undefined)();
 
-            const result = await target.schedule(ADD_1_AND_2_JOB)();
+            const result = await target.schedule(ADD_1_AND_2_JOB)(undefined)();
 
             if (E.isRight(result)) {
                 expect(result.right).toEqual(SAVED_ADD_1_AND_2_JOB);
@@ -307,30 +307,49 @@ describe("Given a Scheduler", () => {
             }
         });
 
+        test("Then it should successfully execute a scheduled job when there is a handler", async () => {
+            handlers.set("NumberAdder", NumberAdder(false));
+            jobRepository.findNextJobs.mockReturnValue(RT.of(List.of()));
+            idProvider.generateId.mockReturnValue(CORRELATION_ID);
+
+            await target.start()(undefined)();
+
+            jobRepository.findNextJobs.mockReturnValue(
+                RT.of(List.of(SAVED_ADD_1_AND_2_JOB))
+            );
+            jobRepository.create.mockReturnValue(
+                RTE.right(SAVED_ADD_1_AND_2_JOB)
+            );
+
+            await target.schedule(ADD_1_AND_2_JOB)(undefined)();
+
+            await sleep(100)();
+        });
+
         test("Then it should not be run if scheduled for the future", async () => {
             handlers.set("NumberAdder", NumberAdder(false));
-            jobRepository.upsert
+            jobRepository.update
                 .calledWith(any())
-                .mockReturnValue(TE.right(SAVED_ADD_1_AND_2_JOB_FOR_LATER));
+                .mockReturnValue(RTE.right(SAVED_ADD_1_AND_2_JOB_FOR_LATER));
 
-            jobRepository.findNextJobs.mockReturnValue(T.of(List.of()));
+            jobRepository.findNextJobs.mockReturnValue(RT.of(List.of()));
 
-            await target.start()();
+            await target.start()(undefined)();
 
             expect(NUMBER_ADDER_EXECUTION_RESULTS.length).toBe(0);
         });
 
         test("Then it should be run if scheduled for now", async () => {
             handlers.set("NumberAdder", NumberAdder(false));
-            jobRepository.upsert
+            jobRepository.update
                 .calledWith(any())
-                .mockReturnValue(TE.right(SAVED_ADD_1_AND_2_JOB));
+                .mockReturnValue(RTE.right(SAVED_ADD_1_AND_2_JOB));
 
             jobRepository.findNextJobs.mockReturnValue(
-                T.of(List.of(SAVED_ADD_1_AND_2_JOB))
+                RT.of(List.of(SAVED_ADD_1_AND_2_JOB))
             );
 
-            await target.start()();
+            await target.start()(undefined)();
 
             expect(NUMBER_ADDER_EXECUTION_RESULTS.length).toBe(1);
         });
@@ -338,15 +357,15 @@ describe("Given a Scheduler", () => {
         test("Then it should return the proper result", async () => {
             handlers.set("NumberAdder", NumberAdder(false));
 
-            jobRepository.upsert
+            jobRepository.update
                 .calledWith(any())
-                .mockReturnValue(TE.right(SAVED_ADD_1_AND_2_JOB));
+                .mockReturnValue(RTE.right(SAVED_ADD_1_AND_2_JOB));
 
             jobRepository.findNextJobs.mockReturnValue(
-                T.of(List.of(SAVED_ADD_1_AND_2_JOB))
+                RT.of(List.of(SAVED_ADD_1_AND_2_JOB))
             );
 
-            await target.start()();
+            await target.start()(undefined)();
 
             expect(NUMBER_ADDER_EXECUTION_RESULTS[0]?.result).toStrictEqual(
                 Success(3)
@@ -356,30 +375,30 @@ describe("Given a Scheduler", () => {
         test("Then it should return the proper error when it fails", async () => {
             handlers.set("NumberAdder", NumberAdder(true));
 
-            jobRepository.upsert
+            jobRepository.update
                 .calledWith(any())
-                .mockReturnValue(TE.right(SAVED_ADD_1_AND_2_JOB));
+                .mockReturnValue(RTE.right(SAVED_ADD_1_AND_2_JOB));
 
             jobRepository.findNextJobs.mockReturnValue(
-                T.of(List.of(SAVED_ADD_1_AND_2_JOB))
+                RT.of(List.of(SAVED_ADD_1_AND_2_JOB))
             );
 
-            await target.start()();
+            await target.start()(undefined)();
 
             expect(NUMBER_ADDER_EXECUTION_ERRORS.length).toBe(1);
         });
 
         test("Then it fails when there is no handler for the scheduled job", async () => {
-            jobRepository.findNextJobs.mockReturnValue(T.of(List.of()));
+            jobRepository.findNextJobs.mockReturnValue(RT.of(List.of()));
 
-            await target.start()();
+            await target.start()(undefined)();
 
             const result = await target.schedule({
                 data: {},
                 name: "My Test Job",
                 scheduledAt: new Date(),
                 type: "test",
-            })();
+            })(undefined)();
 
             expect(E.isLeft(result)).toBe(true);
         });
