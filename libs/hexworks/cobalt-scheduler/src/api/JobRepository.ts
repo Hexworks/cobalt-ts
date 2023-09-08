@@ -39,7 +39,7 @@ export type JobToSave<T extends JsonObject> = JobDescriptor<T> & {
     log?: UnsavedLog;
 };
 
-export type JobToUpdate<T extends JsonObject> = JobToSave<T> & {
+export type JobToUpdate<T extends JsonObject> = Partial<JobToSave<T>> & {
     id: string;
 };
 
@@ -55,21 +55,29 @@ export type JobRepository<CONTEXT> = {
      * {@link JobState.SCHEDULED} state.
      */
     findNextJobs: () => RT.ReaderTask<CONTEXT, List<AnyJob>>;
+
+    findById: <D extends JsonObject>(
+        id: string
+    ) => RTE.ReaderTaskEither<CONTEXT, JobNotFoundError, Job<D>>;
+
     /**
      * Creates the given job.
      */
     create: <D extends JsonObject>(
         job: JobToSave<D>
     ) => RTE.ReaderTaskEither<CONTEXT, JobStorageError, Job<D>>;
+
     /**
      * Updates the given job.
      */
     update: <D extends JsonObject>(
         job: JobToUpdate<D>
     ) => RTE.ReaderTaskEither<CONTEXT, JobStorageError, Job<D>>;
+
     deleteById: (
         id: string
     ) => RTE.ReaderTaskEither<CONTEXT, JobNotFoundError, Job<JsonObject>>;
+
     /**
      * Tries to delete all jobs having the given correlationId.
      * @returns the number of deleted records

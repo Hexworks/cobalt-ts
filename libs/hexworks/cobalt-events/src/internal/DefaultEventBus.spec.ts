@@ -1,10 +1,13 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import { IdProvider } from "@hexworks/cobalt-core";
-import * as T from "fp-ts/lib/Task";
-import { MockProxy, mock } from "jest-mock-extended";
-import { DEFAULT_EVENT_SCOPE, Event } from "../api";
-import { DefaultEventBus } from "./DefaultEventBus";
+import { IdProvider, UnknownError, fail } from "@hexworks/cobalt-core";
+import { randomUUID } from "crypto";
+import * as E from "fp-ts/Either";
+import * as TE from "fp-ts/TaskEither";
 import { List } from "immutable";
+import { MockProxy, mock } from "jest-mock-extended";
+import { DEFAULT_EVENT_SCOPE, Event, SubscriptionOption } from "../api";
+import { EventPublishingError } from "../api/errors";
+import { DefaultEventBus } from "./DefaultEventBus";
 
 const TEST_EVENT_TYPE = "test" as const;
 
@@ -23,6 +26,75 @@ describe("Given an event bus", () => {
         target = new DefaultEventBus(idProvider);
     });
 
+    describe("When there is an error when publishing an event", () => {
+        const error0 = new UnknownError("error0");
+        const error1 = new UnknownError("error1");
+
+        test("Then I get the error(s) back", async () => {
+            const id = randomUUID();
+            idProvider.generateId.mockReturnValue(id);
+
+            target.subscribe(TEST_EVENT_TYPE, () => {
+                return TE.left(error0);
+            });
+
+            target.subscribe(TEST_EVENT_TYPE, () => {
+                return TE.left(error1);
+            });
+
+            target.subscribe(TEST_EVENT_TYPE, () => {
+                return TE.right({
+                    subscription: SubscriptionOption.Keep,
+                });
+            });
+
+            const result = await target.publish(new TestEvent("hello"))();
+
+            if (E.isRight(result)) {
+                fail("Expected error");
+            } else {
+                expect(result.left).toBeInstanceOf(EventPublishingError);
+                expect(result.left.errors.map((e) => e[1].message)).toEqual([
+                    error0.message,
+                    error1.message,
+                ]);
+            }
+        });
+
+        test("Then the remaining subscriptions are executed", async () => {
+            const id = randomUUID();
+            idProvider.generateId.mockReturnValue(id);
+
+            let calls = 0;
+
+            target.subscribe(TEST_EVENT_TYPE, () => {
+                calls++;
+                return TE.left(error0);
+            });
+
+            target.subscribe(TEST_EVENT_TYPE, () => {
+                calls++;
+                return TE.left(error1);
+            });
+
+            target.subscribe(TEST_EVENT_TYPE, () => {
+                calls++;
+                return TE.right({
+                    subscription: "Keep",
+                });
+            });
+
+            const result = await target.publish(new TestEvent("hello"))();
+
+            if (E.isRight(result)) {
+                fail("Expected error");
+            } else {
+                expect(calls).toEqual(3);
+                expect(result.left.errors.length).toEqual(2);
+            }
+        });
+    });
+
     describe("When subscribing to a test event", () => {
         test("Then I get the proper subscription back", () => {
             const id = "1";
@@ -32,7 +104,7 @@ describe("Given an event bus", () => {
             const { cancel, ...rest } = target.subscribe(
                 TEST_EVENT_TYPE,
                 (e) => {
-                    return T.of({
+                    return TE.right({
                         subscription: "Keep",
                     });
                 }
@@ -51,7 +123,7 @@ describe("Given an event bus", () => {
             idProvider.generateId.mockReturnValue(id);
 
             target.subscribe(TEST_EVENT_TYPE, (e) => {
-                return T.of({
+                return TE.right({
                     subscription: "Keep",
                 });
             });
@@ -76,7 +148,7 @@ describe("Given an event bus", () => {
 
             target.subscribe(TEST_EVENT_TYPE, (e) => {
                 calls++;
-                return T.of({
+                return TE.right({
                     subscription: "Keep",
                 });
             });
@@ -95,7 +167,7 @@ describe("Given an event bus", () => {
 
             target.subscribe(TEST_EVENT_TYPE, (e) => {
                 calls++;
-                return T.of({
+                return TE.right({
                     subscription: "Cancel",
                 });
             });
@@ -120,14 +192,14 @@ describe("Given an event bus", () => {
 
             target.subscribe(TEST_EVENT_TYPE, (e) => {
                 calls++;
-                return T.of({
+                return TE.right({
                     subscription: "Keep",
                 });
             });
 
             target.subscribe(TEST_EVENT_TYPE, (e) => {
                 calls++;
-                return T.of({
+                return TE.right({
                     subscription: "Keep",
                 });
             });
@@ -149,14 +221,14 @@ describe("Given an event bus", () => {
 
             target.subscribe(TEST_EVENT_TYPE, (e) => {
                 calls++;
-                return T.of({
+                return TE.right({
                     subscription: "Cancel",
                 });
             });
 
             target.subscribe(TEST_EVENT_TYPE, (e) => {
                 calls++;
-                return T.of({
+                return TE.right({
                     subscription: "Cancel",
                 });
             });
@@ -180,14 +252,14 @@ describe("Given an event bus", () => {
 
             target.subscribe(TEST_EVENT_TYPE, (e) => {
                 firstCalls++;
-                return T.of({
+                return TE.right({
                     subscription: "Keep",
                 });
             });
 
             target.subscribe(TEST_EVENT_TYPE, (e) => {
                 secondCalls++;
-                return T.of({
+                return TE.right({
                     subscription: "Cancel",
                 });
             });
@@ -210,7 +282,7 @@ describe("Given an event bus", () => {
                 TEST_EVENT_TYPE,
                 (e) => {
                     calls++;
-                    return T.of({
+                    return TE.right({
                         subscription: "Keep",
                     });
                 },
@@ -229,7 +301,7 @@ describe("Given an event bus", () => {
             idProvider.generateId.mockReturnValue(id);
 
             target.subscribe(TEST_EVENT_TYPE, (e) => {
-                return T.of({
+                return TE.right({
                     subscription: "Keep",
                 });
             });
@@ -245,7 +317,7 @@ describe("Given an event bus", () => {
             idProvider.generateId.mockReturnValue(id);
 
             target.subscribe(TEST_EVENT_TYPE, (e) => {
-                return T.of({
+                return TE.right({
                     subscription: "Keep",
                 });
             });
@@ -265,7 +337,7 @@ describe("Given an event bus", () => {
             target.subscribe(
                 TEST_EVENT_TYPE,
                 (e) => {
-                    return T.of({
+                    return TE.right({
                         subscription: "Keep",
                     });
                 },
@@ -275,7 +347,7 @@ describe("Given an event bus", () => {
             target.subscribe(
                 TEST_EVENT_TYPE,
                 (e) => {
-                    return T.of({
+                    return TE.right({
                         subscription: "Keep",
                     });
                 },

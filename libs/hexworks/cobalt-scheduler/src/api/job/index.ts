@@ -3,8 +3,6 @@ export * from "./JobContext";
 export * from "./JobDescriptor";
 export * from "./JobHandler";
 export * from "./JobLog";
-export * from "./JobResult";
-export * from "./JobResultHandler";
 export * from "./JobState";
 export * from "./OnErrorStrategy";
 export * from "./OnResultStrategy";

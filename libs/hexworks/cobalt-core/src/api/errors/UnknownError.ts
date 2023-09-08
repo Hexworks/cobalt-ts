@@ -9,7 +9,10 @@ export class UnknownError extends ProgramErrorBase<"UnknownError"> {
     constructor(unknownCause: unknown) {
         super({
             __tag: "UnknownError",
-            message: "Some unknown error happened. This is probably a bug.",
+            message:
+                typeof unknownCause === "string"
+                    ? unknownCause
+                    : "Some unknown error happened. This is probably a bug.",
             details:
                 unknownCause instanceof Error
                     ? {

@@ -1,5 +1,6 @@
 import * as E from "fp-ts/Either";
 import * as TE from "fp-ts/TaskEither";
+import * as RTE from "fp-ts/ReaderTaskEither";
 import { pipe } from "fp-ts/lib/function";
 import * as z from "zod";
 import { ZodValidationError } from "../errors/ZodValidationError";
@@ -22,7 +23,7 @@ export const safeParse =
  * Wraps the output of {@link ZodType.safeParseAsync} into a {@link TaskEither}.
  */
 export const safeParseAsync =
-    <T>(schema: z.ZodType<T>) =>
+    <T>(schema: z.ZodType<T, z.ZodTypeDef, unknown>) =>
     (input: unknown): TE.TaskEither<ZodValidationError, T> => {
         return pipe(
             TE.fromTask(() => schema.safeParseAsync(input)),
@@ -34,4 +35,13 @@ export const safeParseAsync =
                 }
             })
         );
+    };
+
+/**
+ * Wraps the output of {@link ZodType.safeParseAsync} into a {@link ReaderTaskEither}.
+ */
+export const safeParseRTE =
+    <T, R>(schema: z.ZodType<T, z.ZodTypeDef, unknown>) =>
+    (input: unknown): RTE.ReaderTaskEither<R, ZodValidationError, T> => {
+        return pipe(safeParseAsync(schema)(input), RTE.fromTaskEither);
     };

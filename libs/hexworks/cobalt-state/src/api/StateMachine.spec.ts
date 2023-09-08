@@ -5,7 +5,6 @@ import {
     Job,
     JobState,
 } from "@hexworks/cobalt-scheduler";
-import * as T from "fp-ts/Task";
 import * as E from "fp-ts/lib/Either";
 import * as TE from "fp-ts/lib/TaskEither";
 import { List } from "immutable";
@@ -36,14 +35,20 @@ import {
     WaitingForInput,
     WaitingForInputData,
 } from "./test";
+import { v4 as uuid } from "uuid";
+
+const TEST_USER_ID = uuid();
+const CORRELATION_ID = uuid();
+const JOB_ID = uuid();
 
 const TEST_USER: User = {
-    id: "test",
+    id: TEST_USER_ID,
 };
 
 export const JOB_STUB = (job: Partial<Job<JsonObject>>): Job<JsonObject> => {
     const {
-        correlationId = `correlationId`,
+        id = JOB_ID,
+        correlationId = CORRELATION_ID,
         type = `type`,
         currentFailCount = 0,
         data = {},
@@ -56,9 +61,9 @@ export const JOB_STUB = (job: Partial<Job<JsonObject>>): Job<JsonObject> => {
         updatedAt = new Date(),
     } = job;
     return {
+        id,
         correlationId,
         type,
-
         currentFailCount,
         data,
         log,
@@ -181,7 +186,7 @@ describe("Given a state machine StateMachine", () => {
             const acceptableEvent = new BumpSent(id);
 
             formDataRepository.save.mockReturnValueOnce(TE.right(undefined));
-            eventBus.publish.mockReturnValueOnce(T.of(undefined));
+            eventBus.publish.mockReturnValueOnce(TE.right(undefined));
 
             const result = await target.dispatch(
                 {
@@ -199,7 +204,7 @@ describe("Given a state machine StateMachine", () => {
                 E.right({
                     state: Reporting,
                     data: {
-                        userId: "test",
+                        userId: TEST_USER_ID,
                         id,
                         bumpCount: 6,
                         data: "no data",

@@ -1,15 +1,12 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { ProgramError } from "@hexworks/cobalt-core";
 import * as TE from "fp-ts/lib/TaskEither";
 import { JsonObject } from "type-fest";
 import { JobExecutionResult } from "./JobContext";
-import { JobResult } from "./JobResult";
 
-export type OnResultStrategy<
-    INPUT extends JsonObject,
-    OUTPUT extends JobResult
-> = {
-    canHandle: (result: JobResult) => result is OUTPUT;
+export type OnResultStrategy<I extends JsonObject, O> = {
+    canHandle: (result: O) => boolean;
     onResult: (
-        context: JobExecutionResult<INPUT, OUTPUT>
+        context: JobExecutionResult<I, O>
     ) => TE.TaskEither<ProgramError, void>;
 };

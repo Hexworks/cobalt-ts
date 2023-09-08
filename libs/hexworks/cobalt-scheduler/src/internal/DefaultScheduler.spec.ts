@@ -2,6 +2,7 @@ import {
     IdProvider,
     ProgramError,
     UnknownError,
+    fail,
     sleep,
 } from "@hexworks/cobalt-core";
 import * as E from "fp-ts/Either";
@@ -10,20 +11,21 @@ import * as RTE from "fp-ts/ReaderTaskEither";
 import * as TE from "fp-ts/TaskEither";
 import { List } from "immutable";
 import { MockProxy, any, mock } from "jest-mock-extended";
-import { Duration } from "luxon";
-import * as z from "zod";
+import { DateTime, Duration } from "luxon";
 import { v4 as uuid } from "uuid";
+import * as z from "zod";
 import {
     AnyJobHandler,
+    DEFAULT_RETRY_INTERVAL,
     Job,
     JobDescriptor,
     JobExecutionError,
     JobExecutionResult,
     JobRepository,
-    JobResult,
     JobState,
     OnErrorStrategy,
     OnResultStrategy,
+    RetryFailedError,
     Scheduler,
     SchedulerNotRunningError,
     SchedulerStartupError,
@@ -42,50 +44,33 @@ const NumbersToAdd = z.object({
 
 type NumbersToAdd = z.infer<typeof NumbersToAdd>;
 
-export type Success<R> = JobResult & {
-    type: "success";
-    result: R;
-};
+let NUMBER_ADDER_EXECUTION_RESULTS: JobExecutionResult<NumbersToAdd, number>[] =
+    [];
 
-export const Success = <R>(result: R): Success<R> => ({
-    type: "success",
-    result,
-});
-
-let NUMBER_ADDER_EXECUTION_RESULTS: JobExecutionResult<
+let NUMBER_ADDER_EXECUTION_ERRORS: JobExecutionError<
     NumbersToAdd,
-    JobResult
+    UnknownError
 >[] = [];
 
-let NUMBER_ADDER_EXECUTION_ERRORS: JobExecutionError<NumbersToAdd>[] = [];
-
-const REPORT_RESULT_STRATEGY: OnResultStrategy<
-    NumbersToAdd,
-    Success<number>
-> = {
-    canHandle: function (result: JobResult): result is Success<number> {
-        return result.type === "success";
-    },
+const REPORT_RESULT_STRATEGY: OnResultStrategy<NumbersToAdd, number> = {
+    canHandle: () => true,
     onResult: function (
-        context: JobExecutionResult<
-            { first: number; second: number },
-            Success<number>
-        >
+        context: JobExecutionResult<{ first: number; second: number }, number>
     ): TE.TaskEither<ProgramError, void> {
         NUMBER_ADDER_EXECUTION_RESULTS.push(context);
         return TE.right(undefined);
     },
 };
 
-const REPORT_ERROR_STRATEGY: OnErrorStrategy<NumbersToAdd, ProgramError> = {
-    canHandle: (error: ProgramError): error is ProgramError => true,
-    onError: (error: JobExecutionError<NumbersToAdd>) => {
+const REPORT_ERROR_STRATEGY: OnErrorStrategy<NumbersToAdd, UnknownError> = {
+    canHandle: (error: ProgramError): error is UnknownError => true,
+    onError: (error: JobExecutionError<NumbersToAdd, UnknownError>) => {
         NUMBER_ADDER_EXECUTION_ERRORS.push(error);
         return TE.right(undefined);
     },
 };
 
-const NumberAdderError = new UnknownError("Addding numbers failed");
+const NumberAdderError = new UnknownError("Adding numbers failed");
 
 const NumberAdder = (shouldThrow: boolean) =>
     createJobHandler({
@@ -95,8 +80,8 @@ const NumberAdder = (shouldThrow: boolean) =>
             if (shouldThrow) {
                 return TE.left(NumberAdderError);
             }
-            const { first, second } = context.data;
-            return TE.right(Success(first + second));
+            const { first, second } = context.job.data;
+            return TE.right(first + second);
         },
         resultStrategies: [REPORT_RESULT_STRATEGY],
         errorStrategies: [REPORT_ERROR_STRATEGY],
@@ -131,6 +116,25 @@ const SAVED_ADD_1_AND_2_JOB: Job<NumbersToAdd> = {
     log: [],
 };
 
+const FAILED_ADD_1_AND_2_JOB: Job<NumbersToAdd> = {
+    ...UNSAVED_ADD_1_AND_2_JOB,
+    state: JobState.FAILED,
+    id: uuid(),
+    createdAt: ADD_1_AND_2_CREATION_DATE,
+    updatedAt: ADD_1_AND_2_CREATION_DATE,
+    log: [],
+};
+
+const PREVIOUSLY_SCHEDULED_FAILED_ADD_1_AND_2_JOB: Job<NumbersToAdd> = {
+    ...UNSAVED_ADD_1_AND_2_JOB,
+    state: JobState.FAILED,
+    id: uuid(),
+    previouslyScheduledAt: ADD_1_AND_2_CREATION_DATE,
+    createdAt: ADD_1_AND_2_CREATION_DATE,
+    updatedAt: ADD_1_AND_2_CREATION_DATE,
+    log: [],
+};
+
 const LATER = new Date(Date.now() + 1000 * 60 * 60);
 
 const SAVED_ADD_1_AND_2_JOB_FOR_LATER = {
@@ -143,7 +147,7 @@ describe("Given a Scheduler", () => {
     let handlers: Map<string, AnyJobHandler>;
     let timer: MockProxy<Timer>;
     let idProvider: MockProxy<IdProvider<string>>;
-    let target: Scheduler;
+    let target: Scheduler<undefined>;
 
     beforeEach(() => {
         NUMBER_ADDER_EXECUTION_RESULTS = [];
@@ -208,7 +212,7 @@ describe("Given a Scheduler", () => {
         });
     });
 
-    describe("When it is started", () => {
+    describe("When it is started with a mocked timer", () => {
         test("Then the job check interval is right", () => {
             expect(
                 Duration.fromObject({
@@ -234,6 +238,8 @@ describe("Given a Scheduler", () => {
         });
 
         test("Then it should reschedule even if there was an error", async () => {
+            jobRepository.findNextJobs.mockReturnValue(RT.of(List.of()));
+
             await target.start()(undefined)();
 
             expect(timer.setTimeout).toHaveBeenCalled();
@@ -251,6 +257,8 @@ describe("Given a Scheduler", () => {
         });
 
         test("Then it fails if it was already running", async () => {
+            jobRepository.findNextJobs.mockReturnValue(RT.of(List.of()));
+
             await target.start()(undefined)();
             const result = await target.start()(undefined)();
 
@@ -367,9 +375,7 @@ describe("Given a Scheduler", () => {
 
             await target.start()(undefined)();
 
-            expect(NUMBER_ADDER_EXECUTION_RESULTS[0]?.result).toStrictEqual(
-                Success(3)
-            );
+            expect(NUMBER_ADDER_EXECUTION_RESULTS[0]?.result).toStrictEqual(3);
         });
 
         test("Then it should return the proper error when it fails", async () => {
@@ -401,6 +407,116 @@ describe("Given a Scheduler", () => {
             })(undefined)();
 
             expect(E.isLeft(result)).toBe(true);
+        });
+    });
+
+    describe("When a job is retried", () => {
+        test("Then it should fail if the job is not failed", async () => {
+            handlers.set("NumberAdder", NumberAdder(false));
+
+            jobRepository.findNextJobs.mockReturnValue(RT.of(List.of()));
+            jobRepository.findById.mockReturnValue(
+                RTE.right(SAVED_ADD_1_AND_2_JOB)
+            );
+
+            await target.start()(undefined)();
+
+            const result = await target.retry(SAVED_ADD_1_AND_2_JOB.id)(
+                undefined
+            )();
+
+            if (E.isRight(result)) {
+                fail("Expected failure");
+            } else {
+                expect(result.left).toBeInstanceOf(RetryFailedError);
+            }
+        });
+
+        test("Then it should use the retry interval if there was no previous failure", async () => {
+            handlers.set("NumberAdder", NumberAdder(false));
+
+            jobRepository.findNextJobs.mockReturnValue(RT.of(List.of()));
+            jobRepository.findById.mockReturnValue(
+                RTE.right(FAILED_ADD_1_AND_2_JOB)
+            );
+            idProvider.generateId.mockReturnValue(CORRELATION_ID);
+
+            await target.start()(undefined)();
+
+            jobRepository.update.mockReturnValue(
+                RTE.right(FAILED_ADD_1_AND_2_JOB)
+            );
+
+            await target.retry(FAILED_ADD_1_AND_2_JOB.id)(undefined)();
+
+            const id = FAILED_ADD_1_AND_2_JOB.id;
+            const scheduledAt = DateTime.fromJSDate(
+                FAILED_ADD_1_AND_2_JOB.scheduledAt
+            )
+                .plus(DEFAULT_RETRY_INTERVAL)
+                .toJSDate();
+            const previouslyScheduledAt = FAILED_ADD_1_AND_2_JOB.scheduledAt;
+
+            expect(jobRepository.update).toHaveBeenCalledWith({
+                id,
+                scheduledAt,
+                previouslyScheduledAt,
+                state: JobState.SCHEDULED,
+                log: {
+                    note: "Job rescheduled after failure.",
+                },
+            });
+        });
+
+        test("Then it should use the exponential backoff if there was previous failure", async () => {
+            handlers.set("NumberAdder", NumberAdder(false));
+
+            jobRepository.findNextJobs.mockReturnValue(RT.of(List.of()));
+            jobRepository.findById.mockReturnValue(
+                RTE.right(PREVIOUSLY_SCHEDULED_FAILED_ADD_1_AND_2_JOB)
+            );
+
+            await target.start()(undefined)();
+
+            jobRepository.update.mockReturnValue(
+                RTE.right(PREVIOUSLY_SCHEDULED_FAILED_ADD_1_AND_2_JOB)
+            );
+
+            await target.retry(PREVIOUSLY_SCHEDULED_FAILED_ADD_1_AND_2_JOB.id)(
+                undefined
+            )();
+
+            const id = PREVIOUSLY_SCHEDULED_FAILED_ADD_1_AND_2_JOB.id;
+
+            if (
+                PREVIOUSLY_SCHEDULED_FAILED_ADD_1_AND_2_JOB.previouslyScheduledAt ===
+                undefined
+            ) {
+                fail("Expected previouslyScheduledAt to be defined");
+            } else {
+                const diff =
+                    PREVIOUSLY_SCHEDULED_FAILED_ADD_1_AND_2_JOB.scheduledAt.getTime() -
+                    PREVIOUSLY_SCHEDULED_FAILED_ADD_1_AND_2_JOB.previouslyScheduledAt.getTime();
+                const previouslyScheduledAt =
+                    PREVIOUSLY_SCHEDULED_FAILED_ADD_1_AND_2_JOB.scheduledAt;
+                const scheduledAt = DateTime.fromJSDate(
+                    PREVIOUSLY_SCHEDULED_FAILED_ADD_1_AND_2_JOB.scheduledAt
+                )
+                    .plus({
+                        milliseconds: diff * 2,
+                    })
+                    .toJSDate();
+
+                expect(jobRepository.update).toHaveBeenCalledWith({
+                    id,
+                    scheduledAt,
+                    previouslyScheduledAt,
+                    state: JobState.SCHEDULED,
+                    log: {
+                        note: "Job rescheduled after failure.",
+                    },
+                });
+            }
         });
     });
 });

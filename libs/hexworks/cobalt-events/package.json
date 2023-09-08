@@ -1,6 +1,6 @@
 {
     "name": "@hexworks/cobalt-events",
-    "version": "2023.35.0-RELEASE",
+    "version": "2023.41.0-RELEASE",
     "description": "Event bus implementation for Cobalt.",
     "homepage": "https://github.com/Hexworks/cobalt-ts",
     "keywords": [

@@ -1,7 +1,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { IdProvider } from "@hexworks/cobalt-core";
-import * as T from "fp-ts/lib/Task";
-import { pipe } from "fp-ts/lib/function";
+import { IdProvider, ProgramError } from "@hexworks/cobalt-core";
+import * as A from "fp-ts/Array";
+import * as T from "fp-ts/Task";
+import * as TE from "fp-ts/TaskEither";
+import { identity, pipe } from "fp-ts/function";
 import { List, Map } from "immutable";
 import {
     CallbackResult,
@@ -12,6 +14,7 @@ import {
     Subscription,
     SubscriptionDescriptor,
 } from "../api";
+import { EventPublishingError, SubscriptionErrorTuple } from "../api/errors";
 
 const EMPTY_SCOPE = Map<string, List<SubscriptionWithCallback<any, any>>>();
 const NO_SUBSCRIBERS = List<SubscriptionWithCallback<any, any>>();
@@ -20,7 +23,7 @@ type SubscriptionWithCallback<
     E extends Event<T>,
     T extends string = GetEventType<E>
 > = Subscription & {
-    fn: (event: E) => T.Task<CallbackResult>;
+    fn: (event: E) => TE.TaskEither<ProgramError, CallbackResult>;
 };
 
 export class DefaultEventBus implements EventBus {
@@ -47,7 +50,7 @@ export class DefaultEventBus implements EventBus {
 
     subscribe<T extends string, E extends Event<T>>(
         type: string,
-        fn: (event: E) => T.Task<CallbackResult>,
+        fn: (event: E) => TE.TaskEither<ProgramError, CallbackResult>,
         scope: string = DEFAULT_EVENT_SCOPE
     ): Subscription {
         const id = this.idProvider.generateId();
@@ -65,34 +68,49 @@ export class DefaultEventBus implements EventBus {
             EMPTY_SCOPE,
             (v) => v.update(type, NO_SUBSCRIBERS, (v) => v.push(subscription))
         );
-        const { fn: _, ...result } = subscription;
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { fn: __, ...result } = subscription;
         return result;
     }
 
     publish<T extends string, E extends Event<T>>(
         event: E,
         scope: string = DEFAULT_EVENT_SCOPE
-    ): T.Task<void> {
-        const result = this.getSubsriptionsBy(scope, event.type)
-            .map((s) => {
+    ): TE.TaskEither<EventPublishingError, void> {
+        const { type } = event;
+        const results = this.getSubsriptionsBy(scope, type)
+            .map((subscription) => {
+                const { fn, id } = subscription;
                 return pipe(
-                    s.fn(event),
-                    T.map((result) => {
+                    fn(event),
+                    TE.map((result) => {
                         if (result.subscription === "Cancel") {
                             this.cancelSubscription({
+                                id,
                                 scope,
-                                type: event.type,
-                                id: s.id,
+                                type,
                             });
                         }
                     }),
-                    T.map(() => undefined)
+                    TE.mapLeft(
+                        (cause) =>
+                            [subscription, cause] as SubscriptionErrorTuple
+                    )
                 );
             })
             .toArray();
+
         return pipe(
-            T.sequenceArray(result),
-            T.map(() => undefined)
+            results,
+            A.map(TE.bimap((e) => [e], identity)),
+            A.sequence(
+                TE.getApplicativeTaskValidation(
+                    T.ApplyPar,
+                    A.getSemigroup<SubscriptionErrorTuple>()
+                )
+            ),
+            TE.map(() => undefined),
+            TE.mapLeft((e) => new EventPublishingError(e))
         );
     }
 

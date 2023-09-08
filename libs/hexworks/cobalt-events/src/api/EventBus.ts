@@ -1,14 +1,16 @@
-import { IdProvider } from "@hexworks/cobalt-core";
-import * as T from "fp-ts/Task";
+import { IdProvider, ProgramError } from "@hexworks/cobalt-core";
+import * as TE from "fp-ts/TaskEither";
 import { List } from "immutable";
 import { CallbackResult, Event, Subscription } from ".";
 import { DefaultEventBus } from "../internal";
+import { EventPublishingError } from "./errors";
 
 export const DEFAULT_EVENT_SCOPE = "DEFAULT_EVENT_SCOPE";
 
 /**
  * An event bus can be used to broadcast events to subscribers of that event's type.
  */
+// TODO: add trace to the events and check for circular references
 export interface EventBus {
     /**
      * Returns all subscribers for the event with the given `type` and `scope`.
@@ -25,24 +27,27 @@ export interface EventBus {
      * - `Cancel` will cancel it
      * and to issue followup events.
      *
-     * Note that you must not throw an Error from `fn` (check the documentation
-     * of {@link Task} for more information), you need to take care of all errors
-     * within the callback itself.
+     * If there was an error during the execution of the callback a {@link ProgramError}
+     * can be returned and the publisher of the event will be able to handle it.
      */
     subscribe<TYPE extends string, EVENT extends Event<TYPE>>(
         type: TYPE,
-        fn: (event: EVENT) => T.Task<CallbackResult>,
+        fn: (event: EVENT) => TE.TaskEither<ProgramError, CallbackResult>,
         scope?: string
     ): Subscription;
 
     /**
      * Publishes the given {@link Event} to all listeners that have the same
      * `scope` and `type`. By default {@link DEFAULT_EVENT_SCOPE} will be used.
+     *
+     * If there were error(s) during the execution then each error will be
+     * returned in a {@link EventPublishingError} that also contains the
+     * {@link Subscription} that caused the error.
      */
     publish<TYPE extends string, EVENT extends Event<TYPE>>(
         event: EVENT,
         scope?: string
-    ): T.Task<void>;
+    ): TE.TaskEither<EventPublishingError, void>;
 
     /**
      * Cancels all [Subscription]s for the given [scope].
