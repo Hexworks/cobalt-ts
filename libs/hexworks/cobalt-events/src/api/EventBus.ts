@@ -35,7 +35,7 @@ export interface EventBus {
         fn: (event: EVENT) => TE.TaskEither<ProgramError, CallbackResult>,
         scope?: string
     ): Subscription;
-
+        
     /**
      * Publishes the given {@link Event} to all listeners that have the same
      * `scope` and `type`. By default {@link DEFAULT_EVENT_SCOPE} will be used.
